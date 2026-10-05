@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>work-cycle · 스케줄</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="/logo.svg?v=27-apricot">
+<link rel="stylesheet" href="/style.css">
+<style>
+.viewtoggle{display:flex;gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.viewtoggle button{border:0;background:var(--card);font:700 12.5px var(--font);color:var(--ink3);
+  padding:7px 16px;cursor:pointer}
+.viewtoggle button.on{background:var(--accent);color:#fff}
+/* 도넛 달력: 월~일 7열 × 주 행 (2026-09-27 토·일 추가) */
+.donut-cal{display:grid;grid-template-columns:88px repeat(7,1fr);gap:6px;align-items:center}
+.dc-h{font-size:10.5px;font-weight:700;color:var(--ink3);text-align:center;text-transform:uppercase}
+.dc-wk{font-size:11px;font-weight:700;color:var(--ink2);text-align:right;padding-right:8px;white-space:nowrap}
+.dc-cell{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px}
+.donut{width:38px;height:38px;border-radius:50%;position:relative;background:var(--dgrad,var(--donut-todo))}
+.donut::after{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--card)}
+.donut.today{outline:2.5px solid var(--accent);outline-offset:2px}
+.donut .num{position:absolute;inset:0;display:grid;place-items:center;font-size:9.5px;font-weight:800;
+  color:var(--ink2);z-index:1}
+.dc-date{font-size:9.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.dc-cell.future .donut{opacity:.35}
+.donut-btn{background:none;border:0;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:12px}
+.donut-btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.dc-cell.future .donut-btn{cursor:default}
+/* 좁은 화면: 도넛 규칙 뒤에 두어야 크기가 적용된다 */
+@media(max-width:600px){
+  .donut-cal{grid-template-columns:48px repeat(7,1fr);gap:2px}
+  .donut{width:30px;height:30px}.donut::after{inset:7px}.donut .num{font-size:8.5px}
+  .dc-wk{font-size:9.5px;padding-right:4px}.dc-cell{padding:4px 0}.dc-date{font-size:9px}
+}
+/* 도넛 상세 툴팁 */
+#dTip{position:fixed;z-index:60;background:#1F2430;color:#F2F4F9;border-radius:10px;padding:10px 12px;
+  font-size:11.5px;line-height:1.7;min-width:186px;box-shadow:0 10px 28px rgba(15,20,34,.28);
+  pointer-events:none;opacity:0;transition:opacity .12s ease}
+#dTip.on{opacity:1}
+#dTip .th{font-weight:800;font-size:12px;margin-bottom:5px;color:#fff}
+#dTip .r{display:flex;justify-content:space-between;gap:14px}
+#dTip .r i{font-style:normal;color:#9AA3B8}
+#dTip .r.y i{color:#7BE0AE}
+#dTip .fo{margin-top:6px;padding-top:5px;border-top:1px solid #3A4152;color:#9AA3B8;font-size:10.5px}
+@media (prefers-reduced-motion: reduce){ #dTip{transition:none} }
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--ink3);margin-top:12px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+</style>
+<link rel="stylesheet" href="/mobile.css">
+<script src="/mobile.js" defer></script>
+</head>
+<body class="theme-airtable">
+<script src="/theme.js"></script><script src="/mode-switch.js"></script>
+<script src="/ext.js" defer></script>
+<div class="wrap">
+
+<header class="top">
+  <h1><img class="logo" src="/logo.svg?v=27-apricot" alt="">work-cycle</h1>
+  <nav class="nav-tabs">
+    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/schedule" class="on">스케줄</a><a href="/meetings">회의록</a><a href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a>
+  </nav><span class="mode-slot"></span>
+  <button class="mode-toggle" onclick="toggleDark()" title="다크 모드">◑</button>
+  <span class="me" id="me">…</span>
+</header>
+
+<!-- 사이클 도넛 달력: 월~일 7열 × 주 행 -->
+<div class="card">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+    <h2 style="margin:0">사이클 도넛 달력</h2>
+    <span class="sub" style="margin:0" id="donutSub">월~일 · 도넛 한 칸 = 그날 사이클 6단계</span>
+  </div>
+  <div class="donut-cal" id="donutCal"></div>
+  <div class="legend">
+    <span><i style="background:#34A853"></i>완료 단계</span>
+    <span><i style="background:#EFEFEF"></i>미완료</span>
+    <span>도넛 가운데 숫자 = 완료 단계 수 (6이면 하루 사이클 완주)</span>
+  </div>
+</div>
+
+<!-- 스케줄: 주간/월간 토글 -->
+<div class="card">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+    <h2 id="schTitle" style="margin:0">스케줄</h2>
+    <div class="viewtoggle">
+      <button class="on" data-v="week">주간</button>
+      <button data-v="month">월간</button>
+    </div>
+    <span style="display:flex;gap:6px;margin-left:auto">
+      <button class="btn2 ghost" onclick="move(-1)">이전</button>
+      <button class="btn2 ghost" onclick="move(0)">오늘</button>
+      <button class="btn2 ghost" onclick="move(1)">다음</button>
+    </span>
+  </div>
+
+  <!-- 주간 뷰 -->
+  <div id="weekView">
+    <div class="week" id="week"></div>
+    <form class="inline" id="schForm">
+      <input type="date" name="date" required>
+      <select name="block_type">
+        <option value="업무">업무</option>
+        <option value="회의">회의</option>
+      </select>
+      <input name="title" placeholder="일정 제목" required style="flex:1;min-width:140px">
+      <button class="btn2">추가</button>
+      <textarea name="body" rows="2" placeholder="내용 — 무엇을 어디까지 할지, 판단 기준 (선택)"
+        style="flex-basis:100%;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-family:inherit;font-size:12.5px;font-weight:500;
+        background:var(--surface2);color:var(--ink);resize:vertical;box-sizing:border-box"></textarea>
+    </form>
+  </div>
+
+  <!-- 월간 뷰 -->
+  <div id="monthView" style="display:none">
+    <p class="sub">일정(파랑) · 회의(노랑) · 사이클 기록(초록) — 달력이 곧 습관 히트맵입니다</p>
+    <div class="month" id="month" aria-label="월간 스케줄 달력"></div>
+  </div>
+</div>
+
+<footer>work-cycle</footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = async (path, opt) => {
+  const r = await fetch(path, opt ? { headers:{'Content-Type':'application/json'}, ...opt } : undefined);
+  if (!r.ok) { alert((await r.json().catch(()=>({}))).error || '요청 실패'); throw new ApiError(path); }
+  return r.json();
+};
+function esc(s){ return (s??'').toString().replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+const STEP_ORDER = ["read","plan","work","verify","share","retro"];
+const STEP_LABEL = { read:"회의록 읽기", plan:"질문 템플릿", work:"체크리스트", verify:"검증 기록", share:"보고·공유", retro:"AI 회고" };
+const DONE_C = 'var(--donut-done)', TODO_C = 'var(--donut-todo)';
+let ME = null, TODAY = null, VIEW = 'week', ANCHOR = null; // ANCHOR: 주간=해당 주 월요일 Date, 월간=YYYY-MM
+
+function ymd(d){ return d.toISOString().slice(0,10); }
+function kstNow(){ return new Date(Date.now()+9*3600*1000); }
+function mondayOf(d){ const x = new Date(d); x.setUTCDate(x.getUTCDate() - (x.getUTCDay()+6)%7); return x; }
+// 개인용(0020): 서버가 개인 일정·개인 기록만 주고, "?"(요구사항 한 줄 확인)는 회사 3원칙 전용이라 숨긴다
+function isPersonalMode(){ return document.documentElement.dataset.workMode === 'personal'; }
+function applyScheduleCopy(){
+  const sub = document.getElementById('donutSub');
+  if (sub) sub.textContent = isPersonalMode() ? '내 개인 기록 · 월~일 · 도넛 한 칸 = 그날 개인 사이클 6단계' : '월~일 · 도넛 한 칸 = 그날 사이클 6단계';
+}
+applyScheduleCopy();
+document.addEventListener('wc:mode', () => { applyScheduleCopy(); if (typeof loadDonuts === 'function') loadDonuts(); if (typeof loadWeek === 'function') loadWeek(); });
+
+// ── 도넛 달력 (최근 6주, 월~일 7열) ──
+async function loadDonuts(){
+  const thisMon = mondayOf(kstNow());
+  const start = new Date(thisMon); start.setUTCDate(start.getUTCDate() - 7*5); // 6주치
+  const end = new Date(thisMon); end.setUTCDate(end.getUTCDate() + 6);   // 이번 주 일요일까지
+  const d = await api(`/api/cycle_history?from=${ymd(start)}&to=${ymd(end)}`);
+  const byDate = Object.fromEntries(d.days.map(r=>[r.date, r]));
+  let html = '<div></div>' + ['월','화','수','목','금','토','일'].map(n=>`<div class="dc-h">${n}</div>`).join('');
+  for (let w=0; w<6; w++){
+    const mon = new Date(start); mon.setUTCDate(start.getUTCDate() + w*7);
+    const wkNo = Math.ceil(mon.getUTCDate()/7);
+    html += `<div class="dc-wk">${mon.getUTCMonth()+1}월 ${wkNo}주</div>`;
+    for (let i=0; i<7; i++){
+      const day = new Date(mon); day.setUTCDate(mon.getUTCDate()+i);
+      const date = ymd(day);
+      const rec = byDate[date];
+      const steps = rec ? STEP_ORDER.map(s=>rec.steps[s]) : [false,false,false,false,false,false];
+      const stops = steps.map((on,idx)=>`${on?DONE_C:TODO_C} ${idx*60}deg ${(idx+1)*60}deg`).join(',');
+      const future = date > TODAY;
+      const doneN = rec ? rec.done : 0;
+      html += `<div class="dc-cell ${future?'future':''}">
+        <button type="button" class="donut-btn" data-date="${date}" data-future="${future?1:0}"
+          aria-label="${date} 사이클 ${doneN}/6 — 상세 보기">
+          <span class="donut ${date===TODAY?'today':''}" style="--dgrad:conic-gradient(${stops})">
+            <span class="num">${rec?rec.done:''}</span>
+          </span>
+          <span class="dc-date">${date.slice(8)}</span>
+        </button>
+      </div>`;
+    }
+  }
+  $('#donutCal').innerHTML = html;
+  DONUT_DATA = byDate;
+}
+
+// ── 도넛 상세 툴팁 (마우스 · 키보드 공용) ──
+let DONUT_DATA = {};
+const WDAY = ['일','월','화','수','목','금','토'];
+function tipEl(){
+  let t = document.getElementById('dTip');
+  if (!t){ t = document.createElement('div'); t.id = 'dTip'; document.body.appendChild(t); }
+  return t;
+}
+function showTip(btn){
+  const date = btn.dataset.date, rec = DONUT_DATA[date];
+  const steps = rec ? rec.steps : {};
+  const done = rec ? rec.done : 0;
+  const [y,m,d] = date.split('-').map(Number);
+  const wd = WDAY[new Date(Date.UTC(y, m-1, d)).getUTCDay()];
+  const rows = STEP_ORDER.map(s=>{
+    const on = !!steps[s];
+    return `<div class="r ${on?'y':''}"><span>${STEP_LABEL[s]}</span><i>${on?'완료':'미완료'}</i></div>`;
+  }).join('');
+  const t = tipEl();
+  t.innerHTML = `<div class="th">${m}월 ${d}일 (${wd}) · ${done}/6</div>${rows}`
+    + (btn.dataset.future==='1' ? '' : '<div class="fo">클릭하면 그 주 스케줄로 이동</div>');
+  t.classList.add('on');
+  const r = btn.getBoundingClientRect(), tr = t.getBoundingClientRect();
+  let left = r.left + r.width/2 - tr.width/2;
+  left = Math.max(8, Math.min(left, window.innerWidth - tr.width - 8));
+  let top = r.top - tr.height - 10;
+  if (top < 8) top = r.bottom + 10;           // 위가 좁으면 아래로
+  t.style.left = left + 'px';
+  t.style.top = top + 'px';
+}
+function hideTip(){ tipEl().classList.remove('on'); }
+
+$('#donutCal').addEventListener('mouseover', e=>{ const b = e.target.closest('.donut-btn'); if (b) showTip(b); });
+$('#donutCal').addEventListener('mouseout',  e=>{ if (e.target.closest('.donut-btn')) hideTip(); });
+$('#donutCal').addEventListener('focusin',   e=>{ const b = e.target.closest('.donut-btn'); if (b) showTip(b); });
+$('#donutCal').addEventListener('focusout',  hideTip);
+window.addEventListener('scroll', hideTip, { passive:true });
+$('#donutCal').addEventListener('click', e=>{
+  const b = e.target.closest('.donut-btn');
+  if (!b || b.dataset.future === '1') return;
+  const [y,m,d] = b.dataset.date.split('-').map(Number);
+  hideTip();
+  VIEW = 'week';
+  document.querySelectorAll('.viewtoggle button').forEach(x=>x.classList.toggle('on', x.dataset.v==='week'));
+  $('#weekView').style.display = '';
+  $('#monthView').style.display = 'none';
+  ANCHOR = mondayOf(new Date(Date.UTC(y, m-1, d)));
+  loadWeek();
+  $('#weekView').scrollIntoView({ behavior:'smooth', block:'center' });
+});
+
+// ── 주간 뷰 ──
+async function loadWeek(){
+  const mon = ANCHOR;
+  const days = Array.from({length:7},(_,i)=>{ const d=new Date(mon); d.setUTCDate(mon.getUTCDate()+i); return ymd(d); });
+  const wkNo = Math.ceil(mon.getUTCDate()/7);
+  $('#schTitle').textContent = `${mon.getUTCMonth()+1}월 ${wkNo}주 (${days[0].slice(5)} ~ ${days[6].slice(5)})`;
+  const d = await api(`/api/schedules?from=${days[0]}&to=${days[6]}`);
+  SCH_ROWS = d.rows;
+  const names = ['월','화','수','목','금','토','일'];
+  $('#week').innerHTML = days.map((day,i)=>{
+    const blocks = d.rows.filter(r=>r.date===day).map(r=>{
+      const mine = r.user_email===ME;
+      const doneCls = r.status==='완료' ? 'sdone' : '';
+      const recent = mine ? (r.latest_log||'').trim() : '';
+      const recentLine = recent.replace(/\s+/g,' ').slice(0,52);
+      const log = recent ? `<small class="blk-log">📝 ${r.latest_log_time?esc(r.latest_log_time)+' ':''}${esc(recentLine)}${recent.length>52?'…':''}</small>` : '';
+      const tip = recent ? ` · 최근 메모 ${r.latest_log_time||''} ${recentLine}` : '';
+      return `<span class="blk ${r.block_type==='회의'?'meet2':''} ${mine?'clickable':''} ${doneCls} ${recent?'has-log':''}"
+        ${mine?`data-sid="${r.id}" tabindex="0" role="button"`:''} title="${esc(r.title+tip)}">
+        <span class="blk-main">${r.status==='완료'?'✓ ':''}${r.meet_url?'📹 ':''}${(mine&&!isPersonalMode()&&r.status!=='완료'&&!(r.confirm_line||'').trim())?'<i class="nc" title="요구사항을 아직 한 줄로 확인받지 않았습니다">?</i>':''}${esc(r.title)}</span>${log}${mine?`<i class="x" onclick="event.stopPropagation();delSch(${r.id})">×</i>`:''}</span>`;
+    }).join('');
+    return `<div class="wday ${day===TODAY?'today':''}"><b>${day.slice(8)} (${names[i]})</b>${blocks}</div>`;
+  }).join('');
+}
+let SCH_ROWS = [];
+function openSchTag(el){
+  const row = SCH_ROWS.find(s=>String(s.id)===el.dataset.sid);
+  if (row) openSchedModal(row, ()=>{ loadWeek(); loadDonuts(); });
+}
+$('#week').addEventListener('click', e=>{
+  if (e.target.classList.contains('x')) return;
+  const el = e.target.closest('.blk.clickable'); if (el) openSchTag(el);
+});
+$('#week').addEventListener('keydown', e=>{
+  if (e.key!=='Enter' && e.key!==' ') return;
+  const el = e.target.closest('.blk.clickable'); if (!el) return;
+  e.preventDefault(); openSchTag(el);
+});
+async function delSch(id){ await api('/api/schedules/'+id,{method:'DELETE'}); loadWeek(); }
+$('#schForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  await api('/api/schedules',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.target)))});
+  e.target.reset(); $('#schForm').date.value = TODAY; loadWeek();
+});
+
+// ── 월간 뷰 ──
+async function loadMonth(){
+  const ym = ANCHOR; // 'YYYY-MM'
+  const d = await api(`/api/month?ym=${ym}`);
+  $('#schTitle').textContent = `${d.ym.replace('-','년 ')}월`;
+  const [y,m] = d.ym.split('-').map(Number);
+  const first = new Date(Date.UTC(y, m-1, 1));
+  const lead = (first.getUTCDay()+6)%7;
+  const daysIn = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const by = k => d[k].reduce((a,r)=>{ (a[r.date||r.d] ??= []).push(r); return a; }, {});
+  const sch = by('schedules'), meet = by('meetings');
+  const verifs = Object.fromEntries(d.verifs.map(r=>[r.d,r.n]));
+  const checks = Object.fromEntries(d.checks.map(r=>[r.d,r.n]));
+  const retros = new Set(d.retros.map(r=>r.d));
+  let html = ['월','화','수','목','금','토','일'].map(n=>`<div class="mh">${n}</div>`).join('');
+  for (let i=0;i<lead;i++) html += '<div class="mc blank"></div>';
+  for (let day=1;day<=daysIn;day++){
+    const date = `${d.ym}-${String(day).padStart(2,'0')}`;
+    const chips = [
+      ...(meet[date]??[]).map(r=>`<span class="chip meeting" title="${esc(r.title)}">회의 · ${esc(r.title)}</span>`),
+      ...(sch[date]??[]).slice(0,2).map(r=>`<span class="chip sched" title="${esc(r.title)}">${esc(r.title)}</span>`),
+    ];
+    const cyc = [];
+    if (checks[date]) cyc.push(`c${checks[date]}`);
+    if (verifs[date]) cyc.push(`v${verifs[date]}`);
+    if (retros.has(date)) cyc.push('r');
+    if (cyc.length) chips.push(`<span class="chip cyc">사이클 ${cyc.join('·')}</span>`);
+    html += `<div class="mc ${date===TODAY?'today':''}"><i>${day}</i>${chips.join('')}</div>`;
+  }
+  for (let i=lead+daysIn; i%7!==0; i++) html += '<div class="mc blank"></div>';
+  $('#month').innerHTML = html;
+}
+
+// ── 토글 / 이동 ──
+function setView(v){
+  VIEW = v;
+  document.querySelectorAll('.viewtoggle button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
+  $('#weekView').style.display = v==='week' ? '' : 'none';
+  $('#monthView').style.display = v==='month' ? '' : 'none';
+  if (v==='week'){ ANCHOR = mondayOf(kstNow()); loadWeek(); }
+  else { ANCHOR = TODAY.slice(0,7); loadMonth(); }
+}
+document.querySelectorAll('.viewtoggle button').forEach(b=>b.addEventListener('click', ()=>setView(b.dataset.v)));
+function move(n){
+  if (VIEW==='week'){
+    if (n===0) ANCHOR = mondayOf(kstNow());
+    else ANCHOR.setUTCDate(ANCHOR.getUTCDate() + n*7);
+    loadWeek();
+  } else {
+    if (n===0) ANCHOR = TODAY.slice(0,7);
+    else { let [y,m] = ANCHOR.split('-').map(Number); m += n; if(m<1){y--;m=12;} if(m>12){y++;m=1;} ANCHOR = `${y}-${String(m).padStart(2,'0')}`; }
+    loadMonth();
+  }
+}
+
+(async function(){
+  const me = await api('/api/me'); ME = me.email; TODAY = me.today;
+  $('#me').textContent = me.email;
+  $('#schForm').date.value = TODAY;
+  setView('week');
+  loadDonuts();
+})();
+</script>
+<script src="/edit.js"></script>
+<script src="/quick.js"></script>
+<script src="/membership.js"></script>
+<script src="/acc.js"></script>
+<script src="/principles.js"></script>
+</body>
+</html>

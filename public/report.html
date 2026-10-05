@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>work-cycle · 주간업무보고</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg?v=27-apricot">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/mobile.css">
+<script src="/mobile.js" defer></script>
+</head>
+<body>
+<script src="/theme.js"></script><script src="/mode-switch.js"></script>
+<script src="/ext.js" defer></script>
+<div class="wrap">
+
+<header class="top">
+  <h1><img class="logo" src="/logo.svg?v=27-apricot" alt="">work-cycle</h1>
+  <nav class="nav-tabs"><a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/schedule">스케줄</a><a href="/meetings">회의록</a><a href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report" class="on">주간보고</a></nav><span class="mode-slot"></span>
+  <button class="mode-toggle" onclick="toggleDark()" title="다크 모드">◑</button>
+  <span class="me" id="me">…</span>
+</header>
+
+<div class="card">
+  <div class="rp-bar">
+    <button class="btn2 ghost" id="prev" title="지난 주">‹</button>
+    <b id="wkLabel" style="font-size:17px">…</b>
+    <span class="sub" id="wkRange" style="display:inline;margin:0"></span>
+    <button class="btn2 ghost" id="next" title="다음 주">›</button>
+    <span style="flex:1"></span>
+    <span class="sub" id="saveState" style="display:inline;margin:0"></span>
+    <button class="btn2 ghost" id="polish" title="메모는 진행사항으로, 다음 업무일 내용은 진행예정 한 문장으로 다듬습니다 (AI 1회)">✨ 문장 다듬기</button>
+    <button class="btn2 ghost" id="resetAll" title="손댄 칸을 모두 자동 집계로 되돌립니다">자동으로 되돌리기</button>
+    <a class="btn2 pri" id="dl" href="#">⬇ 엑셀로 받기</a>
+  </div>
+  <p class="sub" style="margin:10px 0 0">
+    <span id="rpRange">월~금</span> 일정·메모·검증·회고 기록을 모아 만든 <b>초안</b>입니다. 메모는 그날 진행사항에, 다음 업무일 내용은 진행예정에 반영됩니다.
+  </p>
+</div>
+
+<div class="card" data-acc="rpset" data-acc-default="closed">
+  <h2>보고서 기본 정보</h2>
+  <p class="sub">양식 머리말과 Prj.Code에 들어갑니다. 한 번만 넣어두면 매주 그대로 쓰입니다.</p>
+  <form id="setForm" class="rp-set">
+    <label>작성자<input name="author" placeholder="예: 민예린"></label>
+    <label>소속<input name="dept" placeholder="기술연구소"></label>
+    <label>직급<input name="role_name" placeholder="연구원"></label>
+    <label>Prj.Code<input name="prj_code" placeholder="예: EVX-26"></label>
+    <label>프로젝트명<input name="project" placeholder="예: work-cycle"></label>
+    <button class="btn2 pri">저장</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>미리보기 <span class="sub" style="display:inline" id="fillNote"></span></h2>
+  <p class="sub">엑셀 양식과 같은 배치입니다. 회색 칸 = 자동 집계, 파란 표시 = 직접 고친 칸.</p>
+  <div class="rp-scroll">
+    <table class="rp">
+      <thead><tr>
+        <th style="width:98px">일자</th><th style="width:84px">Prj.Code</th>
+        <th style="width:96px">업무구분</th><th style="width:86px">담당자</th>
+        <th>진행사항</th><th>진행예정</th><th style="width:200px">금주 주간 목표</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <h3 class="rp-h3">차주 업무 계획 및 일정</h3>
+  <div class="rp-scroll">
+    <table class="rp">
+      <thead><tr><th style="width:84px">Prj.Code</th><th style="width:96px">업무구분</th><th style="width:86px">담당자</th><th>진행예정</th></tr></thead>
+      <tbody id="nextRow"></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>work-cycle</footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => (s ?? '').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function api(p, o) {
+  const r = await fetch(p, { headers: { 'Content-Type': 'application/json' }, ...o });
+  // 다른 화면과 동일하게 — 실패는 사용자에게 알리고 흐름을 끊는다 (조용히 사라지지 않게)
+  if (!r.ok) {
+    const msg = (await r.json().catch(() => ({}))).error || '요청 실패';
+    alert(msg); throw new ApiError(msg);
+  }
+  return r.json();
+}
+let WEEK = new URLSearchParams(location.search).get('week') || '';
+let D = null;
+
+function flash(msg) { $('#saveState').textContent = msg; setTimeout(() => { $('#saveState').textContent = ''; }, 1800); }
+
+function cell(field, value, cls) {
+  const on = D.edited.includes(field);
+  const tip = field === 'author'
+    ? '클릭하면 고칠 수 있습니다 — 매주 같은 이름을 쓰려면 위 [보고서 기본 정보]의 작성자에 넣으세요'
+    : '클릭하면 고칠 수 있습니다';
+  return `<td class="rp-c ${cls || ''} ${on ? 'edited' : ''}" data-f="${field}" tabindex="0" role="button"
+    title="${tip}">${value ? esc(value).replace(/\n/g, '<br>') : '<span class="rp-empty">기록 없음</span>'}</td>`;
+}
+
+function render() {
+  $('#wkLabel').textContent = D.label;
+  $('#wkRange').textContent = `${D.week_start} ~ ${D.week_end}`;
+  $('#dl').href = '/api/report/weekly.xlsx?week=' + D.week_start;
+  const filled = D.days.filter(d => d.done.trim()).length;
+  $('#fillNote').textContent = `기록이 채워진 날 ${filled}/${D.days.length}`;
+  $('#rpRange').textContent = D.days.length === 7 ? '월~일 (개인용)' : '월~금';
+
+  $('#rows').innerHTML = D.days.map((d, i) => `<tr>
+    <td class="rp-day">${d.date.slice(5).replace('-', '.')}<br><small>(${d.dow})</small></td>
+    <td class="rp-fix">${esc(D.prj_code)}</td>
+    ${cell('c:' + d.date, d.kind, 'rp-kind')}
+    ${cell('author', D.author, 'rp-who')}
+    ${cell('e:' + d.date, d.done)}
+    ${cell('f:' + d.date, d.todo)}
+    ${i === 0 ? `<td class="rp-c ${D.edited.includes('goal') ? 'edited' : ''}" data-f="goal" rowspan="${D.days.length}" tabindex="0" role="button"
+        title="클릭하면 고칠 수 있습니다">${D.goal ? esc(D.goal).replace(/\n/g, '<br>') : '<span class="rp-empty">기록 없음</span>'}</td>` : ''}
+  </tr>`).join('');
+
+  $('#nextRow').innerHTML = `<tr>
+    <td class="rp-fix">${esc(D.prj_code)}</td>
+    <td class="rp-fix">${esc(D.project)}</td>
+    ${cell('author', D.author, 'rp-who')}
+    ${cell('next', D.next)}
+  </tr>`;
+}
+
+async function load() {
+  D = await api('/api/report/weekly' + (WEEK ? '?week=' + WEEK : ''));
+  WEEK = D.week_start;
+  const author = $('#setForm [name="author"]');
+  if (author && !author.value) author.value = D.author;
+  render();
+}
+
+/* 칸 편집 */
+function editCell(td) {
+  if (td.querySelector('textarea')) return;
+  const field = td.dataset.f;
+  const cur = ({ goal: D.goal, next: D.next, author: D.author }[field]) ??
+    (() => { const [k, dt] = field.split(':'); const d = D.days.find(x => x.date === dt);
+             return k === 'e' ? d.done : k === 'f' ? d.todo : d.kind; })();
+  const h = Math.max(td.offsetHeight, 70);
+  td.innerHTML = `<textarea class="rp-ta" style="height:${h}px">${esc(cur)}</textarea>
+    <div class="rp-act"><button type="button" class="btn2 pri" data-a="ok">저장</button>
+    <button type="button" class="btn2 ghost" data-a="no">취소</button>
+    <button type="button" class="btn2 ghost" data-a="auto" title="이 칸을 자동 집계로 되돌립니다">자동</button></div>`;
+  const ta = td.querySelector('textarea'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); render(); }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); }
+  });
+  const save = async () => {
+    await api('/api/report/cell', { method: 'PUT', body: JSON.stringify({ week: WEEK, field, value: ta.value }) });
+    flash('저장됨'); await load();
+  };
+  td.querySelector('[data-a="ok"]').onclick = save;
+  td.querySelector('[data-a="no"]').onclick = () => render();
+  td.querySelector('[data-a="auto"]').onclick = async () => {
+    await api('/api/report/cell', { method: 'DELETE', body: JSON.stringify({ week: WEEK, field }) });
+    flash('자동 집계로 되돌림'); await load();
+  };
+}
+document.addEventListener('click', e => {
+  const td = e.target.closest('td.rp-c');
+  if (td && !e.target.closest('.rp-act, textarea')) editCell(td);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const td = e.target.closest && e.target.closest('td.rp-c');
+  if (!td || td.querySelector('textarea')) return;
+  e.preventDefault(); editCell(td);
+});
+
+$('#prev').onclick = () => { WEEK = D.prev; load(); };
+$('#next').onclick = () => { WEEK = D.next_week; load(); };
+$('#polish').onclick = async () => {
+  const u = await api('/api/ai/usage');
+  if (!u.ready) { alert('사용 가능한 AI 연결이 설정되지 않았습니다.'); return; }
+  const left = u.limit - u.calls;
+  if (left <= 0) { alert(`오늘 AI 호출 한도(${u.limit}회)를 모두 썼습니다.\n내일 다시 시도해주세요.`); return; }
+  if (!confirm(
+    '메모와 작업 기록을 주간보고 문장으로 다듬습니다.\n\n' +
+    '· 메모는 그날 진행사항으로 정리합니다\n' +
+    '· 진행예정은 다음 업무일 내용을 한 문장으로 요약합니다\n' +
+    '· 직접 고친 칸은 건드리지 않습니다\n' +
+    '· 다듬은 칸은 파란 표시(직접 고친 칸)로 바뀌어 고정됩니다 — 마음에 안 들면 그 칸의 [자동]으로 되돌리세요\n' +
+    '· AI 연결이 안 되면 자동 초안은 바뀌지 않고 그대로 유지됩니다\n' +
+    `· AI 호출 1회를 씁니다 (오늘 남은 횟수 ${left}회)`
+  )) return;
+  const btn = $('#polish'); btn.disabled = true; btn.textContent = '다듬는 중…';
+  try {
+    const r = await api('/api/report/polish', { method: 'POST', body: JSON.stringify({ week: WEEK }) });
+    if (!r.updated) { alert(r.note || '다듬을 칸이 없었습니다.'); return; }
+    const via = r.provider === 'workers-ai' ? 'Cloudflare AI' : r.provider === 'gemini' ? 'Gemini' : '로컬 모의 AI';
+    flash(`${r.updated}칸을 다듬었습니다 · ${via} (오늘 ${r.calls}/${r.limit}회)`);
+    await load();
+  } finally { btn.disabled = false; btn.textContent = '✨ 문장 다듬기'; }
+};
+
+$('#resetAll').onclick = async () => {
+  if (!confirm('이번 주에 직접 고친 칸을 모두 자동 집계로 되돌릴까요?')) return;
+  await api('/api/report/cell', { method: 'DELETE', body: JSON.stringify({ week: WEEK }) });
+  flash('전부 되돌림'); load();
+};
+
+/* 기본 정보 */
+(async () => {
+  // 헤더 이메일 — 다른 화면과 같이 /api/me 로 채운다 (전에는 "…" 그대로였음)
+  api('/api/me').then(me => { const el = $('#me'); if (el) el.textContent = me.email; }).catch(() => {});   // quick.js 계정 메뉴는 글자를 그대로 쓴다
+  const { settings } = await api('/api/report/settings');
+  if (settings) for (const [k, v] of Object.entries(settings)) {
+    const el = $(`#setForm [name="${k}"]`); if (el) el.value = v ?? '';
+  }
+  $('#setForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    await api('/api/report/settings', { method: 'PUT', body: JSON.stringify(Object.fromEntries(new FormData(e.target))) });
+    flash('기본 정보 저장됨'); load();
+  });
+  await load();
+})();
+</script>
+<script src="/quick.js"></script>
+<script src="/membership.js"></script>
+<script src="/acc.js"></script>
+<script src="/principles.js"></script>
+</body>
+</html>

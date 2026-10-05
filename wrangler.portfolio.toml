@@ -1,0 +1,6 @@
+name = "work-cycle-portfolio"
+compatibility_date = "2026-10-03"
+workers_dev = true
+
+[assets]
+directory = "./portfolio"

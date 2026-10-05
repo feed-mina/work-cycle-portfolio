@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>work-cycle · 검증 대시보드</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg?v=27-apricot">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/mobile.css">
+<script src="/mobile.js" defer></script>
+</head>
+<body>
+<script src="/theme.js"></script><script src="/mode-switch.js"></script>
+<script src="/ext.js" defer></script>
+<div class="wrap">
+
+<header class="top">
+  <h1><img class="logo" src="/logo.svg?v=27-apricot" alt="">work-cycle</h1>
+  <nav class="nav-tabs"><a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/schedule">스케줄</a><a href="/meetings">회의록</a><a href="/kanban">칸반</a><a href="/dashboard" data-mode="company" class="on">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a></nav><span class="mode-slot"></span>
+  <button class="mode-toggle" onclick="toggleDark()" title="다크 모드">◑</button>
+  <span class="me" id="me">…</span>
+</header>
+
+<div class="card" data-acc="dashv">
+  <h2>최근 검증 현황</h2>
+  <p class="sub">팀 전체의 검증 기록입니다. "미확인"이 남아 있으면 그 항목은 아직 완료가 아닙니다.</p>
+  <div class="tiles">
+    <div class="tile"><div class="v" id="tTotal">0</div><div class="l">전체 검증 기록</div></div>
+    <div class="tile ok"><div class="v" id="tOk">0</div><div class="l">확인됨</div></div>
+    <div class="tile fix"><div class="v" id="tFix">0</div><div class="l">불일치 → 수정</div></div>
+    <div class="tile todo"><div class="v" id="tTodo">0</div><div class="l">미확인</div></div>
+  </div>
+</div>
+
+<div class="card" id="byDate"></div>
+
+<footer>work-cycle</footer>
+</div>
+
+<script>
+const $ = (s)=>document.querySelector(s);
+const PILL = { '확인됨':'ok', '불일치→수정':'fix', '미확인':'todo' };
+function esc(s){ return (s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+let ME = null, DASH_ROWS = [];
+async function loadDash(){
+  const d = await (await fetch('/api/dashboard?days=21')).json();
+  DASH_ROWS = d.dates.flatMap(g=>g.rows);
+  $('#tTotal').textContent = d.summary.total;
+  $('#tOk').textContent    = d.summary['확인됨'] ?? 0;
+  $('#tFix').textContent   = d.summary['불일치→수정'] ?? 0;
+  $('#tTodo').textContent  = d.summary['미확인'] ?? 0;
+
+  $('#byDate').innerHTML = '<h2>날짜별 이력</h2>' + (d.dates.length ? d.dates.map(g=>`
+    <div class="date-h">${g.date} <span style="color:var(--ink3);font-weight:600">· ${g.rows.length}건</span></div>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>작성자</th><th>항목</th><th>계산식</th><th>검증 방법</th><th>결과</th><th>상태</th></tr></thead>
+      <tbody>${g.rows.map(r=>{
+        const mine = r.user_email===ME;
+        return `<tr class="${r.status==='미확인'?'todo-row':''} ${mine?'editable':''}"
+          ${mine?`data-vid="${r.id}" tabindex="0" role="button" aria-label="${esc(r.item)} 편집"`:''}>
+          <td>${esc(r.name)}</td><td><b>${esc(r.item)}</b>${mine?' <span class="ed-mark">✎</span>':''}</td><td>${esc(r.formula)}</td>
+          <td>${esc(r.method)}</td><td>${esc(r.result)}</td>
+          <td><span class="pill ${PILL[r.status]||'todo'}">${r.status}</span></td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>`).join('') : '<p class="sub">아직 검증 기록이 없습니다. 오늘 화면에서 첫 줄을 추가해보세요.</p>');
+}
+function openDashRow(tr){
+  const row = DASH_ROWS.find(v=>String(v.id)===tr.dataset.vid);
+  if (row) openVerifModal(row, loadDash);
+}
+$('#byDate').addEventListener('click', e=>{ const tr = e.target.closest('tr.editable'); if (tr) openDashRow(tr); });
+$('#byDate').addEventListener('keydown', e=>{
+  if (e.key!=='Enter' && e.key!==' ') return;
+  const tr = e.target.closest('tr.editable'); if (!tr) return;
+  e.preventDefault(); openDashRow(tr);
+});
+(async function(){
+  const me = await (await fetch('/api/me')).json();
+  ME = me.email; $('#me').textContent = me.email;
+  loadDash();
+})();
+</script>
+<script src="/edit.js"></script>
+<script src="/quick.js"></script>
+<script src="/membership.js"></script>
+<script src="/acc.js"></script>
+<script src="/principles.js"></script>
+</body>
+</html>

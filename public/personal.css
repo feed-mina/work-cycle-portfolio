@@ -1,0 +1,36 @@
+#personal-work form{margin:14px 0;display:flex;flex-wrap:wrap;gap:8px}
+#personal-work input[name=title],#personal-work input[name=note]{flex:1;min-width:150px}
+#personal-work input[name=minutes]{width:100px}
+.personal-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.personal-row span{flex:1;min-width:0}.personal-row input[type=checkbox]{width:20px;flex:none}
+.personal-row small{color:var(--ink3)}
+.personal-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.personal-metrics article{padding:18px;border:1px solid var(--line);border-radius:12px}
+.personal-metrics strong{display:block;font-size:30px;color:var(--accent)}
+.personal-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.personal-filters label{display:grid;gap:4px}.personal-filters input{max-width:100%}
+.personal-table{overflow-x:auto}.personal-table table{min-width:650px}
+.personal-detail{white-space:pre-wrap;overflow-wrap:anywhere;border-bottom:1px solid var(--line);padding:12px 0}
+#personalUiStatus{overflow-wrap:anywhere}#personalPreviewText{white-space:pre-wrap}
+@media(max-width:600px){.personal-metrics{grid-template-columns:1fr}header.top label{max-width:100%}.personal-filters>*{max-width:100%}.personal-row{flex-wrap:wrap}.personal-row small{width:100%}.wrap{min-width:0}input,textarea,select{max-width:100%}}
+
+/* 업무 메모 인라인 수정 · 답글(대댓글, 0021) — 2026-09-27 */
+.worklog-body{min-width:0}
+.worklog-inline{display:grid;gap:6px}
+.worklog-inline textarea{width:100%;box-sizing:border-box;border:1px solid var(--accent);border-radius:var(--r-sm);padding:8px 10px;
+  resize:vertical;background:var(--card);color:var(--ink);font:400 13px/1.55 var(--font)}
+.worklog-inline textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.worklog-inline-acts{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.worklog-inline-acts .btn2{height:30px;padding:0 12px;font-size:12px}
+.worklog-inline-acts small{color:var(--ink3);font-size:11px}
+.worklog-replies{grid-column:1/-1;margin-left:48px;border-left:2px solid var(--line);padding-left:10px}
+.worklog-row.reply{padding:8px 2px;border-bottom:0;border-top:1px dashed var(--line);grid-template-columns:64px minmax(0,1fr) auto}
+.worklog-row.reply:first-child{border-top:0}
+.worklog-arrow{color:var(--ink3);margin-right:3px;font-weight:400}
+.worklog-reply-form{grid-template-columns:auto minmax(0,1fr);padding:8px 0 2px}
+.worklog-reply-form .worklog-arrow{align-self:start;padding-top:8px}
+.worklog-reply-form .worklog-inline-acts{grid-column:2}
+@media(max-width:620px){
+  .worklog-replies{margin-left:0}
+  .worklog-row.reply{grid-template-columns:56px minmax(0,1fr)}
+}

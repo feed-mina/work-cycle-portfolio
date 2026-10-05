@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>work-cycle · 나의 준비 현황</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="/logo.svg?v=27-apricot">
+<link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/personal.css">
+<link rel="stylesheet" href="/mobile.css">
+<script src="/mobile.js" defer></script>
+</head>
+<body class="theme-material" data-work-mode="personal">
+<script src="/theme.js"></script><script src="/mode-switch.js"></script>
+<script src="/ext.js" defer></script>
+<div class="wrap">
+<!-- 뼈대(테마·폰트·헤더·스크립트)는 personal.html 과 같다 — 개인용 두 화면이 같은 모양으로 보이게 -->
+<header class="top">
+  <h1><img class="logo" src="/logo.svg?v=27-apricot" alt="">work-cycle</h1>
+  <nav class="nav-tabs">
+    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/schedule">스케줄</a><a href="/meetings">회의록</a><a href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal" class="on">나의 준비 현황</a><a href="/report">주간보고</a>
+  </nav><span class="mode-slot"></span>
+  <button class="mode-toggle" onclick="toggleDark()" title="다크 모드">◑</button>
+  <span class="me" id="me">…</span>
+</header><p id="personalUiStatus" role="status"></p>
+<section class="card" data-acc="pd-next"><h2>다음 행동과 확인이 남은 결과</h2><p id="personalNext"></p><p id="personalPending"></p></section>
+<section class="card" data-acc="pd-summary"><h2>나의 준비 현황</h2><form id="personalFilters" class="personal-filters inline"><label>기간<select name="period"><option value="week">이번 주</option><option value="month">이번 달</option><option value="custom">직접 선택</option></select></label><label>시작일<input name="from" type="date" required></label><label>종료일<input name="to" type="date" required></label><label>분류<select name="category"><option value="">전체</option><option>구직</option><option>학습</option><option>개인 프로젝트</option></select></label><button class="btn2">조회</button></form><p id="personalRange" class="sub"></p><div class="personal-metrics"><article>기간 내 결과<strong id="personalResultCount">—</strong></article></div><p class="sub">결과는 선택한 기간에 저장한 결과 기록 건수입니다.</p></section>
+
+<section class="card" data-acc="pd-results"><h2>결과 기록</h2><p class="sub">날짜 · 한 일 · 근거 · 확인 상태를 확인하고 기록 상세를 열 수 있습니다.</p><div class="personal-table"><table><thead><tr><th>날짜</th><th>한 일</th><th>분류</th><th>확인한 근거</th><th>확인 상태</th><th>상세</th></tr></thead><tbody id="personalResultRows"></tbody></table></div></section>
+<!-- 개인 할 일·집중 시간 기록 카드는 뺐다(2026-10-02 사용자 결정 · 입력 칸은 v44에서 이미 없음). personal_tasks·personal_focus 표와 API는 보존 -->
+<section class="card" data-acc="pd-journal"><h2>계획과 하루 회고 이력</h2><p class="sub">선택한 기간의 기록입니다. 분류 필터는 결과 기록에만 적용됩니다.</p><div id="personalJournal"></div></section>
+<footer>work-cycle · 개인용</footer>
+</div>
+<script src="/personal-edit.js"></script>
+<script src="/quick.js"></script>
+<script src="/membership.js"></script>
+<script src="/acc.js"></script>
+<script src="/principles.js"></script>
+<script src="/personal-ui.js"></script>
+</body>
+</html>

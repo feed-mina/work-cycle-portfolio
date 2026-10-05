@@ -1,0 +1,2 @@
+# 로컬 개발용 — 복사해서 .dev.vars 로 저장 (git에 올라가지 않음)
+DEV_EMAIL=yerin@company.com

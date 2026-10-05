@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>work-cycle · 개인용</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="/logo.svg?v=27-apricot">
+<link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/personal.css">
+<link rel="stylesheet" href="/mobile.css">
+<script src="/mobile.js" defer></script>
+</head>
+<body class="theme-material" data-work-mode="personal">
+<script src="/theme.js"></script><script src="/mode-switch.js"></script>
+<script src="/ext.js" defer></script>
+<div class="wrap">
+
+<header class="top">
+  <h1><img class="logo" src="/logo.svg?v=27-apricot" alt="">work-cycle</h1>
+  <nav class="nav-tabs">
+    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal" class="on">개인 마이페이지</a><a href="/schedule">스케줄</a><a href="/meetings">회의록</a><a href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a>
+  </nav><span class="mode-slot"></span>
+  <button class="mode-toggle" onclick="toggleDark()" title="다크 모드">◑</button>
+  <span class="me" id="me">…</span>
+</header><p id="personalUiStatus" role="status"></p>
+
+<div class="hero2">
+  <div>
+    <h1>안녕하세요, <em id="heroName">…</em>님.<br>오늘 개인 사이클 <em id="heroDone">0/6</em> 진행 중.</h1>
+    <div class="hdate" id="heroDate"></div>
+  </div>
+  <div style="text-align:right">
+    <div class="hdate" id="nowStep" style="font-size:14px;font-weight:700;color:var(--accent)"></div>
+  </div>
+</div>
+
+<!-- 사이클 보드 -->
+<div class="card sig">
+  <h2>오늘의 사이클</h2>
+  <p class="sub">읽기 → 계획 → 작업 → 검증 → 공유 → 회고 — 각 단계는 실제 기록(읽음·저장·체크)으로 완료됩니다</p>
+  <div class="cycle" id="cycle"></div>
+  <div id="team" style="margin-top:14px"></div>
+</div>
+
+<!-- 개인 할 일·집중 시간 데이터와 API는 보존한다. 이 카드만 개인 화면에서 숨긴다. -->
+<!-- 주간 스케줄 (harness 이관) -->
+<div class="card" id="weekcard" data-acc="week">
+  <h2>주간 스케줄 <span class="sub" id="weekRange" style="display:inline"></span></h2>
+  <div class="week" id="week"></div>
+  <form class="inline" id="schForm">
+    <input type="date" name="date" required>
+    <select name="block_type">
+      <option value="업무">업무</option>
+      <option value="회의">회의</option>
+    </select>
+    <input name="title" placeholder="일정 제목" required style="flex:1;min-width:140px">
+    <button class="btn2">추가</button>
+    <textarea name="body" rows="2" placeholder="내용 — 무엇을 어디까지 할지, 판단 기준 (선택)"
+      style="flex-basis:100%;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-family:inherit;font-size:12.5px;font-weight:500;
+      background:var(--surface2);color:var(--ink);resize:vertical;box-sizing:border-box"></textarea>
+  </form>
+</div>
+
+<!-- 업무 중 시간순 메모 -->
+<div class="card worklog-card" id="worklogCard">
+  <div class="worklog-head">
+    <div>
+      <h2>메모</h2>
+      <p class="sub" id="worklogHelp">오늘 업무를 고르고, 일하면서 발견한 내용을 시간순으로 남깁니다.</p>
+    </div>
+    <span class="worklog-status" id="worklogStatus" aria-live="polite"></span>
+  </div>
+  <div class="worklog-date-nav" aria-label="메모 날짜 선택">
+    <button type="button" id="worklogPrev" aria-label="이전 날짜">‹</button>
+    <label><span>메모 날짜</span><input type="date" id="worklogDate" aria-label="메모 날짜"></label>
+    <button type="button" class="worklog-today" id="worklogToday">오늘</button>
+    <button type="button" id="worklogNext" aria-label="다음 날짜">›</button>
+    <button type="button" class="worklog-today worklog-md" id="worklogMd" title="선택한 날짜의 실행 계획 · 메모 · 하루 회고를 md 파일 하나로 내려받습니다">md 내려받기</button>
+    <button type="button" class="worklog-today worklog-vault" id="worklogVault" hidden>ME에 올리기</button>
+  </div>
+  <div class="worklog-empty" id="worklogEmpty" hidden>
+    선택한 날짜에 등록한 업무가 없습니다.
+  </div>
+  <div id="worklogMain">
+    <div class="worklog-picker">
+      <label><span id="worklogScheduleLabel">오늘 업무</span><select id="worklogSchedule" aria-label="메모를 확인할 업무"></select></label>
+      <button class="btn2 ghost" type="button" id="worklogOpen">일정 상세 열기</button>
+    </div>
+    <div class="worklog-summary" id="worklogSummary" hidden></div>
+    <form class="worklog-form" id="worklogForm">
+      <textarea name="body" rows="2" maxlength="1000" required
+        placeholder="발견한 내용이나 진행 상황을 입력하세요. Ctrl+Enter로 바로 기록할 수 있습니다."></textarea>
+      <button class="btn2">기록</button>
+    </form>
+    <button class="worklog-toggle" type="button" id="worklogToggle" aria-expanded="false" aria-controls="worklogRecords">
+      기록 보기
+    </button>
+    <div id="worklogRecords" hidden>
+      <div class="worklog-list" id="worklogList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑦ 계획 + ⑥ 회고 -->
+<div class="duo">
+  <div class="card pr-form" id="plan" data-acc="plan" data-acc-group="today">
+    <h2>오늘의 실행 계획</h2>
+    <p class="sub">AI에게 보내기 전 요청문 — 어제 회고의 제안이 아래 프리필로 옵니다</p>
+    <div class="prefill" id="prefill" style="display:none"></div>
+    <form id="planForm">
+      <label>오늘 이룰 것</label>
+      <textarea name="user_flow" rows="3" required placeholder="오늘 해야 할 일을 작은 단계로 적어주세요"></textarea>
+      <label>이어갈 습관·자산</label><input name="keep">
+      <label>오늘 하지 않을 일</label><input name="dont_touch">
+      <label>완료하면 남길 결과</label><input name="done_criteria" placeholder="예: 완성한 결과물이나 설명을 남기면 완료">
+      <label>도움 필요한 점</label><input name="unknowns">
+      <button class="btn2" style="width:100%;justify-content:center">저장하고 요청문 복사</button>
+    </form>
+  </div>
+  <div class="card pr-form" id="retro" data-acc="retro" data-acc-group="today">
+    <h2>하루 돌아보기</h2>
+    <p class="sub">"너라면 어떻게 했을까?" 답을 붙이고, 내일 쓸 요청문을 남기세요</p>
+    <form id="retroForm">
+      <label>오늘 한 일과 배운 점</label>
+      <textarea name="work_summary" rows="3" required placeholder="오늘 한 일을 2~3줄로"></textarea>
+      <label>받은 조언 / 내 생각 (선택)</label>
+      <textarea name="ai_answer_md" rows="3"></textarea>
+      <label>내일 첫 행동</label>
+      <textarea name="tomorrow_prompt" rows="2"></textarea>
+      <button class="btn2" style="width:100%;justify-content:center">회고 저장</button>
+    </form>
+  </div>
+</div>
+
+
+<!-- 퀵 기록 (습관 버튼) -->
+<div class="card" id="habit" data-acc="habit" data-acc-default="closed">
+  <h2>퀵 기록 <span class="sub" style="display:inline" id="qkSummary"></span></h2>
+  <p class="sub">버튼을 누르면 현재 시각으로 +1 · 지정하지 않은 요일은 — 표시 · 주간 항목은 이번 주 합계</p>
+  <div id="habitGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px"></div>
+  <form class="inline habit-form" id="habitForm" style="margin-top:12px">
+    <select name="emoji_choice" class="habit-emoji-select" aria-label="이모지 선택" title="이모지 선택">
+      <option value="🔥">🔥</option><option value="✅">✅</option><option value="📅">📅</option>
+      <option value="💧">💧</option><option value="📚">📚</option><option value="💬">💬</option>
+      <option value="__custom__">직접 입력…</option>
+    </select>
+    <input name="emoji_custom" class="habit-emoji-custom" placeholder="원하는 이모지" maxlength="8" hidden>
+    <input name="name" placeholder="새 버튼 이름 (예: 물마시기)" required style="flex:1;min-width:140px">
+    <select name="repeat_type" class="habit-repeat" aria-label="반복 주기" title="반복 주기">
+      <option value="daily">평일 매일</option><option value="everyday">매일</option><option value="weekend">주말만</option><option value="selected">요일 선택</option><option value="weekly">주 N회</option>
+    </select>
+    <div class="habit-day-picker" hidden aria-label="반복 요일">
+      <label><input type="checkbox" name="repeat_days" value="1">월</label>
+      <label><input type="checkbox" name="repeat_days" value="2">화</label>
+      <label><input type="checkbox" name="repeat_days" value="3">수</label>
+      <label><input type="checkbox" name="repeat_days" value="4">목</label>
+      <label><input type="checkbox" name="repeat_days" value="5">금</label>
+      <label><input type="checkbox" name="repeat_days" value="6">토</label>
+      <label><input type="checkbox" name="repeat_days" value="7">일</label>
+    </div>
+    <input name="goal" type="number" min="1" value="1" title="하루 목표 횟수" aria-label="목표 횟수" style="width:64px">
+    <button class="btn2">+ 새 버튼</button>
+  </form>
+</div>
+
+<!-- 🔔 알림 연결 (카카오 나에게 보내기 + 구글 캘린더) -->
+<div class="card" id="remind" data-acc="remind" data-acc-default="closed">
+  <h2>🔔 리마인드 알림</h2>
+  <p class="sub"><span>화면 선택과 알림 선택은 별도입니다. 아래에서 개인 알림을 선택하면 본인의 기존 회사 알림 대신 개인 기록을 보냅니다.</span><br>평일 시간표 —
+    <b>08:25</b> 개인 계획·기록 요약 ·
+    <b>10:00</b> 하루 시작 · <b>12:30</b> 집중해서 진행하기 ·
+    <b>13:00</b> 개인 기록 점검(금요일만) ·
+    <b>17:00</b> 결과 확인·마무리 · <b>17:40</b> 저녁 점검.
+    체크리스트 알림은 <b>아직 안 누른 항목만</b> 보내고, 다 눌렀으면 보내지 않습니다.</p>
+  <div class="inline" style="align-items:center;gap:8px;flex-wrap:wrap">
+    <a id="rmKakao" class="btn2" href="/auth/kakao/start" style="text-decoration:none;background:#FEE500;color:#191919;border:0">💬 카카오 연결</a>
+    <a id="rmGoogle" class="btn2" href="/auth/google/start" style="text-decoration:none">📅 구글 캘린더 연결</a>
+    <button class="btn2" id="rmTest" title="지금 시각 기준 점검 메시지를 카카오톡으로 발송">테스트 발송</button>
+    <form class="inline" id="personalReminderForm" style="margin:0;align-items:center" onsubmit="return false"><button type="button" class="btn2 ghost" id="personalPreview">개인 알림 미리보기</button><label class="sub" style="display:inline;margin:0">예약 알림 <select id="personalReminderMode" aria-label="예약 알림 선택"><option value="company">기존 회사용</option><option value="personal">개인용</option></select></label><button type="button" class="btn2" id="personalReminderSave">알림 선택 저장</button></form><span class="sub" id="rmStatus" style="display:inline"></span>
+  </div>
+</div>
+
+<!-- ⑤ 체크리스트 -->
+<div class="card" id="check" data-acc="check">
+  <h2>오늘의 실천 체크리스트</h2>
+  <p class="sub">개인 체크리스트 12개를 모두 체크하면 '작업 중' 단계가 완료됩니다.</p>
+  <div id="checklist"></div>
+</div>
+
+<!-- ② 검증 표 -->
+<div class="card" id="verif" data-acc="verif">
+  <h2>오늘의 결과 기록</h2>
+  <p class="sub">진행한 일과 목표, 확인한 근거와 실제 결과를 기록합니다.</p>
+  <form class="vf" id="vform">
+    <input class="full" name="item" placeholder="진행한 일" required>
+    <input name="formula" placeholder="목표 / 기준">
+    <input name="method" placeholder="확인한 근거">
+    <input class="full" name="result" placeholder="실제 결과">
+    <select name="status"><option>미확인</option><option>확인됨</option><option>불일치→수정</option></select>
+    <select name="category" aria-label="결과 분류"><option>개인 프로젝트</option><option>학습</option><option>구직</option></select><button class="btn2">결과 한 줄 추가</button>
+  </form>
+  <div class="tbl-scroll"><table>
+    <thead><tr><th>항목</th><th>목표 / 기준</th><th>확인한 근거</th><th>결과</th><th>상태</th><th></th></tr></thead>
+    <tbody id="vrows"></tbody>
+  </table></div>
+</div>
+
+<footer>work-cycle · 개인용 — 개인 계획·회고·체크리스트·결과는 회사 기록과 분리 저장 · 스케줄·회의록·칸반·퀵 기록·주간보고는 공용</footer>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const api = async (path, opt) => {
+  const r = await fetch(path, opt ? { headers: {'Content-Type':'application/json'}, ...opt } : undefined);
+  if (!r.ok) { alert((await r.json().catch(()=>({}))).error || '요청 실패'); throw new Error(path); }
+  return r.json();
+};
+function esc(s){ return (s??'').toString().replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+const STEP_ORDER = ["read","plan","work","verify","share","retro"];
+const MANUAL = ["read","share"]; // M2: ④⑦⑥은 실제 기록으로 완료, ③공유만 수동
+let ME = null, NOW_STEP = null, TODAY = null;
+
+
+async function loadBoard(){
+  const now = await api('/api/widget/now'); NOW_STEP = now.current;
+  $('#nowStep').textContent = `지금 할 단계: ${now.meta.label}`;
+  const b = await api('/api/personal/board');
+  $('#heroDate').textContent = b.date + ' · KST';
+  const mine = b.board.find(u => u.email === ME) || { steps:{}, done:0, total:6 };
+  $('#heroDone').textContent = `${mine.done}/${mine.total}`;
+  $('#cycle').innerHTML = STEP_ORDER.map(s => {
+    const m = b.step_meta[s];
+    const done = !!mine.steps[s];
+    const canMark = MANUAL.includes(s) && !done;
+    // 회의록 읽기 단계는 전 영업일 회의록으로 바로 간다.
+    const readDate = b.meeting_read_date || b.date;
+    const go = s === 'read' ? '/meetings?tab=list&date=' + encodeURIComponent(readDate) : '';
+    return `<div class="step ${done?'done':''} ${s===NOW_STEP?'now':''} ${go?'linked':''}"
+      ${go?`role="link" tabindex="0" title="회의록 목록으로 이동 — 옵시디언에서 가져올 수 있습니다"
+            onclick="location.href='${go}'"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();location.href='${go}'}"`:''}>
+      <div class="t">${m.time}</div><div class="l">${m.label}</div>
+      <div class="s">${done?'<span class="on">완료</span>':'미완료'}</div>
+      ${go?`<div class="go">${esc(readDate.slice(5))} 회의록 보기 →</div>`:''}
+      ${canMark?`<button onclick="event.stopPropagation();markStep('${s}')">완료 표시</button>`:''}
+    </div>`;
+  }).join('');
+  $('#team').innerHTML = b.board.map(u => `
+    <div class="team-row"><span class="nm">${esc(u.name)}</span>
+      <span class="dots">${STEP_ORDER.map(s=>`<span class="dot ${u.steps[s]?'on':''}" title="${b.step_meta[s].label}"></span>`).join('')}</span>
+      <span class="cnt">${u.done}/${u.total}</span></div>`).join('');
+}
+async function markStep(step){ await api('/api/personal/step_marks',{method:'POST',body:JSON.stringify({step})}); loadBoard(); }
+
+// ── 주간 스케줄 ──
+function ymd(d){ return d.toISOString().slice(0,10); }
+function weekDates(){
+  const now = new Date(Date.now()+9*3600*1000);
+  const dow = (now.getUTCDay()+6)%7; // 월=0
+  const mon = new Date(now); mon.setUTCDate(now.getUTCDate()-dow);
+  return Array.from({length:7},(_,i)=>{ const d=new Date(mon); d.setUTCDate(mon.getUTCDate()+i); return ymd(d); });
+}
+let SCH_ROWS = [];
+async function loadWeek(){
+  const days = weekDates();
+  $('#weekRange').textContent = ` ${days[0]} ~ ${days[6]}`;
+  const d = await api(`/api/schedules?from=${days[0]}&to=${days[6]}`);
+  SCH_ROWS = d.rows;
+  const names = ['월','화','수','목','금','토','일'];
+  $('#week').innerHTML = days.map((day,i)=>{
+    const blocks = d.rows.filter(r=>r.date===day).map(r=>{
+      const mine = r.user_email===ME;
+      const doneCls = r.status==='완료' ? 'sdone' : '';
+      const recent = mine ? (r.latest_log||'').trim() : '';
+      const recentLine = recent.replace(/\s+/g,' ').slice(0,52);
+      const log = recent ? `<small class="blk-log">📝 ${r.latest_log_time?esc(r.latest_log_time)+' ':''}${esc(recentLine)}${recent.length>52?'…':''}</small>` : '';
+      const tip = recent ? ` · 최근 메모 ${r.latest_log_time||''} ${recentLine}` : (r.body?' — 클릭하면 내용':'');
+      return `<span class="blk ${r.block_type==='회의'?'meet2':''} ${mine?'clickable':''} ${doneCls} ${recent?'has-log':''}"
+        ${mine?`data-sid="${r.id}" tabindex="0" role="button"`:''} title="${esc(r.title+tip)}">
+        <span class="blk-main">${r.status==='완료'?'✓ ':''}${r.meet_url?'📹 ':''}${(mine&&r.status!=='완료'&&(r.confirm_line||'').trim()&&!Number(r.confirmed))?'<i class="nc" title="확인할 점이 남아 있습니다 — 눌러서 확인">?</i>':''}${esc(r.title)}</span>${log}${mine?`<i class="x" onclick="event.stopPropagation();delSch(${r.id})">×</i>`:''}</span>`;
+    }).join('');
+    return `<div class="wday ${day===TODAY?'today':''}"><b>${day.slice(8)} (${names[i]})</b>${blocks}</div>`;
+  }).join('');
+}
+function openSchTag(el){
+  const row = SCH_ROWS.find(s=>String(s.id)===el.dataset.sid);
+  if (row) openSchedModal(row, ()=>{ loadWeek(); loadWorkLogs(row.id); });
+}
+$('#week').addEventListener('click', e=>{
+  if (e.target.classList.contains('x')) return;
+  const el = e.target.closest('.blk.clickable'); if (el) openSchTag(el);
+});
+$('#week').addEventListener('keydown', e=>{
+  if (e.key!=='Enter' && e.key!==' ') return;
+  const el = e.target.closest('.blk.clickable'); if (!el) return;
+  e.preventDefault(); openSchTag(el);
+});
+async function delSch(id){ await api('/api/schedules/'+id,{method:'DELETE'}); await Promise.all([loadWeek(), loadWorkLogs()]); }
+$('#schForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  await api('/api/schedules',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.target)))});
+  e.target.reset(); e.target.date.value = TODAY; await Promise.all([loadWeek(), loadWorkLogs()]);
+});
+
+// ── 업무 메모: 일정의 최종 정리 메모와 분리된 시간순 작업 기록 ──
+let WORKLOG_DATA = { schedules:[], logs:[] };
+let WORKLOG_OPEN = false;
+let WORKLOG_DATE = null;
+let WORKLOG_EDIT = null;   // 인라인 수정 중인 메모 id
+let WORKLOG_REPLIES_READY = true;   // 서버에 0021(parent_id)이 있는지 — 없으면 "추가" 버튼을 숨긴다
+let WORKLOG_REPLY = null;  // 답글 입력창을 연 메모 id (0021 대댓글)
+function selectedWork(){
+  const id = Number($('#worklogSchedule').value);
+  return WORKLOG_DATA.schedules.find(s=>Number(s.id)===id) || null;
+}
+function renderWorkLogs(){
+  const work = selectedWork();
+  if (!work) return;
+  const summary = $('#worklogSummary');
+  if ((work.memo||'').trim()) {
+    summary.hidden = false;
+    summary.innerHTML = `<b>정리 메모</b><span>${esc(work.memo)}</span>`;
+  } else summary.hidden = true;
+
+  const logs = WORKLOG_DATA.logs.filter(l=>Number(l.schedule_id)===Number(work.id));
+  // 대댓글(0021): 뿌리 메모는 최신순(서버 순서), 답글은 그 아래 오래된 순
+  const roots = logs.filter(l=>!l.parent_id);
+  const replies = {};
+  logs.filter(l=>l.parent_id).sort((a,b)=>a.id-b.id).forEach(l=>{ (replies[l.parent_id] ??= []).push(l); });
+  const bodyHtml = l => WORKLOG_EDIT===l.id
+    ? `<form class="worklog-inline" data-log-edit-form="${l.id}">
+        <textarea name="body" rows="3" maxlength="1000" required aria-label="메모 수정">${esc(l.body)}</textarea>
+        <div class="worklog-inline-acts"><button type="submit" class="btn2">저장</button><button type="button" class="btn2 ghost" data-log-cancel="1">취소</button><small>Ctrl+Enter 저장 · Esc 취소</small></div>
+      </form>`
+    : `<p>${esc(l.body)}</p>`;
+  const actions = (l, root) => `<div class="worklog-actions">
+      <button type="button" data-log-edit="${l.id}">수정</button>
+      ${root && WORKLOG_REPLIES_READY ? `<button type="button" data-log-reply="${l.id}" title="이 메모 아래에 답글을 답니다">추가</button>` : ''}
+      <button type="button" data-log-delete="${l.id}">삭제</button>
+    </div>`;
+  const replyForm = l => WORKLOG_REPLY===l.id
+    ? `<form class="worklog-inline worklog-reply-form" data-log-reply-form="${l.id}">
+        <span class="worklog-arrow" aria-hidden="true">↳</span>
+        <textarea name="body" rows="2" maxlength="1000" required placeholder="이 메모에 이어서 적을 내용" aria-label="답글"></textarea>
+        <div class="worklog-inline-acts"><button type="submit" class="btn2">답글 저장</button><button type="button" class="btn2 ghost" data-log-cancel="1">취소</button><small>Ctrl+Enter 저장 · Esc 취소</small></div>
+      </form>`
+    : '';
+  $('#worklogList').innerHTML = roots.map(l=>`<article class="worklog-row" data-lid="${l.id}">
+    <time datetime="${esc(l.logged_date+'T'+l.logged_time)}">${esc(l.logged_time)}</time>
+    <div class="worklog-body">${bodyHtml(l)}</div>
+    ${actions(l, true)}
+    ${(replies[l.id]||[]).length || WORKLOG_REPLY===l.id ? `<div class="worklog-replies">
+      ${(replies[l.id]||[]).map(r=>`<article class="worklog-row reply" data-lid="${r.id}">
+        <time datetime="${esc(r.logged_date+'T'+r.logged_time)}"><span class="worklog-arrow" aria-hidden="true">↳</span>${esc(r.logged_time)}</time>
+        <div class="worklog-body">${bodyHtml(r)}</div>
+        ${actions(r, false)}
+      </article>`).join('')}
+      ${replyForm(l)}
+    </div>` : ''}
+  </article>`).join('') || `<p class="worklog-none">${WORKLOG_DATE===TODAY?'아직 기록이 없습니다. 첫 메모를 남겨보세요.':'이 날짜에 남긴 시간순 메모가 없습니다.'}</p>`;
+  const focusTa = $('#worklogList form textarea');
+  if (focusTa) { focusTa.focus(); focusTa.setSelectionRange(focusTa.value.length, focusTa.value.length); }
+  const toggle = $('#worklogToggle');
+  const records = $('#worklogRecords');
+  toggle.hidden = !logs.length;
+  toggle.textContent = WORKLOG_OPEN ? `기록 접기 (${logs.length}개)` : `기록 보기 (${logs.length}개)`;
+  toggle.setAttribute('aria-expanded', String(WORKLOG_OPEN));
+  records.hidden = logs.length ? !WORKLOG_OPEN : WORKLOG_DATE===TODAY;
+}
+async function loadWorkLogs(preferId){
+  const before = String(preferId || $('#worklogSchedule').value || '');
+  const date = WORKLOG_DATE || TODAY;
+  const data = await api('/api/work-logs?date='+encodeURIComponent(date));
+  WORKLOG_DATA = data;
+  WORKLOG_REPLIES_READY = data.replies_ready !== false;   // 0021 전이면 답글 버튼 숨김
+  const isToday = date === TODAY;
+  $('#worklogDate').value = date;
+  $('#worklogDate').max = TODAY;
+  $('#worklogNext').disabled = date >= TODAY;
+  $('#worklogToday').disabled = isToday;
+  $('#worklogScheduleLabel').textContent = isToday ? '오늘 업무' : `${date} 업무`;
+  $('#worklogHelp').textContent = isToday
+    ? '오늘 업무를 고르고, 일하면서 발견한 내용을 시간순으로 남깁니다.'
+    : '선택한 날짜의 기존 메모입니다. 내용 수정과 삭제는 가능하고, 새 기록은 오늘만 남길 수 있습니다.';
+  $('#worklogForm').hidden = !isToday;
+  const empty = !data.schedules.length;
+  $('#worklogEmpty').hidden = !empty;
+  $('#worklogEmpty').textContent = isToday
+    ? '오늘 등록한 업무가 없습니다. 위 주간 스케줄에서 업무를 먼저 추가하세요.'
+    : `${date}에 등록한 업무가 없습니다.`;
+  $('#worklogMain').hidden = empty;
+  if (empty) return;
+  const select = $('#worklogSchedule');
+  select.innerHTML = data.schedules.map(s=>`<option value="${s.id}">${s.status==='완료'?'✓ ':''}${esc(s.title)}</option>`).join('');
+  if (data.schedules.some(s=>String(s.id)===before)) select.value = before;
+  WORKLOG_OPEN = !isToday;
+  renderWorkLogs();
+}
+function moveWorkLogDate(offset){
+  const d = new Date(`${WORKLOG_DATE || TODAY}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate()+offset);
+  const next = ymd(d);
+  if (next > TODAY) return;
+  WORKLOG_DATE = next;
+  $('#worklogStatus').textContent = '';
+  loadWorkLogs();
+}
+$('#worklogPrev').addEventListener('click', ()=>moveWorkLogDate(-1));
+$('#worklogNext').addEventListener('click', ()=>moveWorkLogDate(1));
+// 하루 기록 md (2026-10-02) — 메모 날짜 칸에 고른 날짜의 실행 계획·메모·하루 회고. 서버가 첨부로 내려 주므로 페이지는 그대로 남는다.
+$('#worklogMd').addEventListener('click', ()=>{ location.href = '/api/personal/day.md?date=' + encodeURIComponent(WORKLOG_DATE || TODAY); });
+// 볼트(ME) history/ 에 올리기 (2026-10-02) — 볼트 주인에게만 보인다. 매일 23:50·다음 날 00:10 에 자동으로도 올라간다.
+(async ()=>{
+  const btn = $('#worklogVault');
+  const st = await fetch('/api/vault-history/status').then(r=>r.ok?r.json():null).catch(()=>null);
+  if (!st?.mine) return;
+  btn.hidden = false;
+  btn.disabled = !st.enabled;
+  btn.title = st.enabled ? `선택한 날짜의 md 를 ME 저장소 ${st.dir}/ 에 올립니다 · 자동: ${st.schedule}` : `꺼져 있음 — ${st.reason}`;
+  btn.addEventListener('click', async ()=>{
+    const date = WORKLOG_DATE || TODAY;
+    btn.disabled = true; $('#worklogStatus').textContent = 'ME에 올리는 중…';
+    try {
+      const r = await fetch('/api/vault-history/sync', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ date }) });
+      const d = await r.json();
+      $('#worklogStatus').textContent = !r.ok ? (d.error || '올리기 실패')
+        : d.status === 'uploaded' ? `ME ${d.path} 에 올렸습니다`
+        : d.status === 'unchanged' ? `ME ${d.path} 와 내용이 같아 그대로 둡니다`
+        : `${date} 에는 올릴 기록이 없습니다`;
+    } catch (e) { $('#worklogStatus').textContent = '올리기 실패 — ' + e.message; }
+    btn.disabled = false;
+  });
+})();
+$('#worklogToday').addEventListener('click', ()=>{ WORKLOG_DATE=TODAY; $('#worklogStatus').textContent=''; loadWorkLogs(); });
+$('#worklogDate').addEventListener('change', e=>{
+  if (!e.target.value) { e.target.value=WORKLOG_DATE || TODAY; return; }
+  WORKLOG_DATE = e.target.value > TODAY ? TODAY : e.target.value;
+  $('#worklogStatus').textContent = '';
+  loadWorkLogs();
+});
+$('#worklogSchedule').addEventListener('change', ()=>{ WORKLOG_OPEN=false; renderWorkLogs(); });
+$('#worklogToggle').addEventListener('click', ()=>{ WORKLOG_OPEN=!WORKLOG_OPEN; renderWorkLogs(); });
+$('#worklogOpen').addEventListener('click', ()=>{
+  const work = selectedWork();
+  if (work) openSchedModal(work, ()=>{ loadWeek(); loadWorkLogs(work.id); });
+});
+$('#worklogForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const work = selectedWork(); if (!work) return;
+  const textarea = e.target.elements.body;
+  const body = textarea.value.trim(); if (!body) return;
+  const button = e.target.querySelector('button');
+  button.disabled = true; $('#worklogStatus').textContent = '저장 중…';
+  try {
+    const saved = await api(`/api/schedules/${work.id}/logs`,{method:'POST',body:JSON.stringify({body})});
+    textarea.value = '';
+    $('#worklogStatus').textContent = `저장됨 ${saved.logged_time}`;
+    await Promise.all([loadWorkLogs(work.id), loadWeek()]);
+  } finally { button.disabled = false; }
+});
+$('#worklogForm textarea').addEventListener('keydown', e=>{
+  if (e.key==='Enter' && e.ctrlKey) { e.preventDefault(); e.target.form.requestSubmit(); }
+});
+// 수정 → 그 자리에서 textarea 로 고친다 · 추가 → 그 메모 아래에 답글 입력창 (0021 대댓글)
+$('#worklogList').addEventListener('click', async e=>{
+  const editId = e.target.dataset.logEdit;
+  const replyId = e.target.dataset.logReply;
+  const deleteId = e.target.dataset.logDelete;
+  if (e.target.dataset.logCancel) { WORKLOG_EDIT = null; WORKLOG_REPLY = null; renderWorkLogs(); return; }
+  if (editId) { WORKLOG_EDIT = Number(editId); WORKLOG_REPLY = null; renderWorkLogs(); return; }
+  if (replyId) { WORKLOG_REPLY = Number(replyId); WORKLOG_EDIT = null; renderWorkLogs(); return; }
+  if (deleteId) {
+    const log = WORKLOG_DATA.logs.find(l=>String(l.id)===deleteId); if (!log) return;
+    const n = WORKLOG_DATA.logs.filter(l=>String(l.parent_id)===deleteId).length;
+    if (!confirm(n ? `이 메모와 답글 ${n}개를 삭제할까요?` : '이 시간 기록을 삭제할까요?')) return;
+    await api('/api/work-logs/'+deleteId,{method:'DELETE'});
+    WORKLOG_EDIT = null; WORKLOG_REPLY = null;
+    $('#worklogStatus').textContent = '삭제됨'; await Promise.all([loadWorkLogs(log.schedule_id), loadWeek()]);
+  }
+});
+$('#worklogList').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const editId = e.target.dataset.logEditForm, replyId = e.target.dataset.logReplyForm;
+  const body = e.target.elements.body.value.trim(); if (!body) return;
+  const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+  try {
+    if (editId) {
+      const log = WORKLOG_DATA.logs.find(l=>String(l.id)===editId); if (!log) return;
+      if (body !== log.body) await api('/api/work-logs/'+editId,{method:'PATCH',body:JSON.stringify({body})});
+      WORKLOG_EDIT = null; $('#worklogStatus').textContent = body !== log.body ? '수정됨' : '';
+      await Promise.all([loadWorkLogs(log.schedule_id), loadWeek()]);
+    } else if (replyId) {
+      const parent = WORKLOG_DATA.logs.find(l=>String(l.id)===replyId); if (!parent) return;
+      const saved = await api(`/api/schedules/${parent.schedule_id}/logs`,{method:'POST',body:JSON.stringify({body, parent_id: parent.id})});
+      WORKLOG_REPLY = null; WORKLOG_OPEN = true; $('#worklogStatus').textContent = `답글 저장됨 ${saved.logged_time}`;
+      await Promise.all([loadWorkLogs(parent.schedule_id), loadWeek()]);
+    }
+  } finally { btn.disabled = false; }
+});
+$('#worklogList').addEventListener('keydown', e=>{
+  if (e.target.tagName !== 'TEXTAREA') return;
+  if (e.key==='Enter' && e.ctrlKey) { e.preventDefault(); e.target.form.requestSubmit(); }
+  if (e.key==='Escape') { e.preventDefault(); WORKLOG_EDIT = null; WORKLOG_REPLY = null; renderWorkLogs(); }
+});
+
+// ── ⑦ 계획 (어제 회고 프리필) ──
+let PREFILL_ID = null;
+async function loadPrefill(){
+  const d = await api('/api/personal/plan/prefill');
+  if(d.today) for(const k of ['user_flow','keep','dont_touch','done_criteria','unknowns']) $('#planForm').elements[k].value=d.today[k]||'';
+  if(d.retro) for(const k of ['work_summary','ai_answer_md','tomorrow_prompt']) $('#retroForm').elements[k].value=d.retro[k]||'';
+  if (d.prefill?.tomorrow_prompt){
+    PREFILL_ID = d.prefill.id;
+    $('#prefill').style.display='block';
+    $('#prefill').textContent = `📌 ${d.prefill.cycle_date} 회고에서: ${d.prefill.tomorrow_prompt}`;
+    const f = $('#planForm'); if(!f.user_flow.value) f.user_flow.value = d.prefill.tomorrow_prompt;
+  }
+}
+$('#planForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const body = Object.fromEntries(new FormData(e.target));
+  if (PREFILL_ID) body.reused_from = PREFILL_ID;
+  const r = await api('/api/personal/plan',{method:'POST',body:JSON.stringify(body)});
+  try { await navigator.clipboard.writeText(r.final_prompt); alert('저장 완료! 요청문이 클립보드에 복사됐습니다.'); }
+  catch { alert('저장 완료!\n\n' + r.final_prompt); }
+  loadBoard();
+});
+
+// ── ⑥ 회고 ──
+$('#retroForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  await api('/api/personal/retro',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.target)))});
+  alert('개인 회고를 저장했습니다. 내일 실행 계획에 이어집니다.');
+  loadBoard();
+});
+
+// ── ⑤ 체크리스트 / ② 검증 (M1 그대로) ──
+/* 지금 시각에 해당하는 체크리스트 구간만 펼친다 (알림 시간표와 같은 기준) */
+function nowSections(){
+  const kst = new Date(Date.now() + 9*3600*1000);
+  const hm = kst.getUTCHours()*100 + kst.getUTCMinutes();
+  if (hm < 1230) return ['하루 방향 잡기'];
+  if (hm < 1700) return ['집중해서 진행하기'];
+  return ['결과 확인하기','하루 마무리하기'];
+}
+async function loadChecklist(){
+  const d = await api('/api/personal/checklist');
+  const bySec = {}; d.items.forEach(i => (bySec[i.section] ??= []).push(i));
+  const NOW_SEC = nowSections();
+  $('#checklist').innerHTML = Object.entries(bySec).map(([sec, items]) => {
+    const done = items.filter(i=>i.checked).length;
+    const open = NOW_SEC.includes(sec);
+    return `<div class="secx" data-sec="${esc(sec)}" data-sec-default="${open?'open':'closed'}">
+      <button type="button" class="sec-h" aria-expanded="${open}">
+        <span>${esc(sec)}</span>
+        <span class="sec-n ${done===items.length?'full':''}">${done}/${items.length}</span>
+        <span class="acc-ar" aria-hidden="true">▾</span>
+      </button>
+      <div class="sec-body">${items.map(i=>`<div class="check-row" data-check-id="${i.id}">
+        <label class="chk" onclick="openChecklistMemo(${i.id})"><input type="checkbox" ${i.checked?'checked':''}
+          onchange="toggleCheck(${i.id}, this.checked)"><span>${esc(i.text)}</span></label>
+        <button type="button" class="check-memo-hint" id="check-memo-hint-${i.id}" ${i.memo?'':'hidden'}
+          onclick="openChecklistMemo(${i.id})" aria-controls="check-memo-box-${i.id}">📝 메모 있음</button>
+        <div class="check-memo" id="check-memo-box-${i.id}" hidden>
+          <label class="sr-only" for="check-memo-${i.id}">${esc(i.text)} 메모</label>
+          <textarea id="check-memo-${i.id}" rows="1" maxlength="1000" data-saved="${esc(i.memo||'')}"
+            placeholder="확인한 내용이나 메모를 적어주세요" aria-describedby="check-memo-status-${i.id}"
+            oninput="queueChecklistMemo(${i.id})" onblur="saveChecklistMemo(${i.id})"
+            onkeydown="checklistMemoKeydown(event, ${i.id})">${esc(i.memo||'')}</textarea>
+          <div class="check-memo-status" id="check-memo-status-${i.id}" role="status" aria-live="polite"></div>
+        </div>
+      </div>`).join('')}</div>
+    </div>`;
+  }).join('');
+  if (window.accSections) accSections($('#checklist'));
+}
+async function toggleCheck(item_id, checked){
+  await api('/api/personal/checks',{method:'POST',body:JSON.stringify({item_id,checked})});
+  openChecklistMemo(item_id);
+  refreshSecCounts(); loadBoard();
+}
+const CHECK_MEMO_TIMERS = {};
+function openChecklistMemo(item_id){
+  const box = document.getElementById(`check-memo-box-${item_id}`);
+  if (!box) return;
+  box.hidden = false;
+  const hint = document.getElementById(`check-memo-hint-${item_id}`);
+  if (hint) hint.hidden = true;
+}
+function queueChecklistMemo(item_id){
+  const input = document.getElementById(`check-memo-${item_id}`);
+  const status = document.getElementById(`check-memo-status-${item_id}`);
+  if (!input || !status) return;
+  clearTimeout(CHECK_MEMO_TIMERS[item_id]);
+  if (input.value === (input.dataset.saved || '')) { status.textContent = ''; return; }
+  status.textContent = '저장 대기 중…';
+  CHECK_MEMO_TIMERS[item_id] = setTimeout(()=>saveChecklistMemo(item_id), 700);
+}
+async function saveChecklistMemo(item_id){
+  clearTimeout(CHECK_MEMO_TIMERS[item_id]);
+  const input = document.getElementById(`check-memo-${item_id}`);
+  const status = document.getElementById(`check-memo-status-${item_id}`);
+  if (!input || !status || input.value === (input.dataset.saved || '')) return;
+  const snapshot = input.value;
+  status.textContent = '저장 중…';
+  try {
+    const res = await fetch(`/api/personal/checklist/${item_id}/memo`, {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({memo:snapshot})
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) throw new Error(data.error || '저장 실패');
+    if (input.value !== snapshot) { queueChecklistMemo(item_id); return; }
+    input.value = typeof data.memo === 'string' ? data.memo : snapshot.trim();   // 서버가 memo 를 안 줘도 칸을 비우지 않는다
+    input.dataset.saved = input.value;
+    status.textContent = data.deleted ? '메모 삭제됨' : '저장됨';
+    const hint = document.getElementById(`check-memo-hint-${item_id}`);
+    if (hint) hint.hidden = !input.value;
+  } catch (err) {
+    if (input.value === snapshot) status.textContent = '저장하지 못했습니다. 다시 입력하면 재시도합니다.';
+  }
+}
+function checklistMemoKeydown(event, item_id){
+  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+    event.preventDefault(); saveChecklistMemo(item_id);
+  }
+}
+/* 섹션 배지(3/5)를 화면 상태에서 다시 셈 — 다시 그리지 않아 펼침 상태가 유지됩니다 */
+function refreshSecCounts(){
+  document.querySelectorAll('#checklist .secx').forEach(sec=>{
+    const all = sec.querySelectorAll('input[type=checkbox]');
+    const on  = sec.querySelectorAll('input[type=checkbox]:checked');
+    const n = sec.querySelector('.sec-n');
+    if (n){ n.textContent = `${on.length}/${all.length}`; n.classList.toggle('full', on.length===all.length && all.length>0); }
+  });
+}
+const PILL = { '확인됨':'ok', '불일치→수정':'fix', '미확인':'todo' };
+let VERIF_ROWS = [];
+async function loadVerifs(){
+  const d = await api('/api/personal/verifications');
+  VERIF_ROWS = d.rows;
+  $('#vrows').innerHTML = d.rows.map(r=>{
+    const mine = r.user_email===ME;
+    return `<tr class="${r.status==='미확인'?'todo-row':''} ${mine?'editable':''}"
+      ${mine?`data-vid="${r.id}" tabindex="0" role="button" aria-label="${esc(r.item)} 결과 기록 편집"`:''}>
+      <td><b>${esc(r.item)}</b></td><td>${esc(r.formula)}</td><td>${esc(r.method)}</td><td>${esc(r.result)}</td>
+      <td><span class="pill ${PILL[r.status]||'todo'}">${r.status}</span></td>
+      <td>${mine?'<span class="ed-mark" title="클릭하면 편집">✎</span>':''}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" style="color:var(--ink3)">아직 오늘 결과 기록이 없습니다</td></tr>';
+}
+function openVerifRow(tr){
+  const row = VERIF_ROWS.find(v=>String(v.id)===tr.dataset.vid);
+  if (row) openVerifModal(row, ()=>{ loadVerifs(); loadBoard(); });
+}
+$('#vrows').addEventListener('click', e=>{ const tr = e.target.closest('tr.editable'); if (tr) openVerifRow(tr); });
+$('#vrows').addEventListener('keydown', e=>{
+  if (e.key!=='Enter' && e.key!==' ') return;
+  const tr = e.target.closest('tr.editable'); if (!tr) return;
+  e.preventDefault(); openVerifRow(tr);
+});
+$('#vform').addEventListener('submit', async e=>{
+  e.preventDefault();
+  await api('/api/personal/verifications',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.target)))});
+  e.target.reset(); loadVerifs(); loadBoard();
+});
+async function delVerif(id){ await api('/api/personal/verifications/'+id,{method:'DELETE'}); loadVerifs(); loadBoard(); }
+
+
+// ── 🔔 리마인드 알림 ──
+async function loadReminderStatus(){
+  try{
+    const s = await api('/api/reminders/status');
+    const parts = [];
+    parts.push(s.kakao ? '카카오 ✅' : (s.secrets_ready ? '카카오 미연결' : '카카오 secret 미등록'));
+    parts.push(s.google ? '캘린더 ✅' : (s.google_ready ? '캘린더 미연결' : '캘린더 secret 미등록'));
+    document.getElementById('rmStatus').textContent = parts.join(' · ');
+  }catch(e){ /* 무시 */ }
+}
+document.getElementById('rmTest').addEventListener('click', async ()=>{
+  const btn = document.getElementById('rmTest'); btn.disabled = true; btn.textContent = '발송 중…';
+  try{
+    const r = await api('/api/reminders/test', {method:'POST', body: JSON.stringify({profile:'personal'})});
+    alert(r.sent ? '카카오톡 "나와의 채팅"을 확인해보세요!' : ('발송 실패: ' + (r.detail || '카카오 연결을 먼저 해주세요')));
+  } finally { btn.disabled = false; btn.textContent = '테스트 발송'; }
+});
+if (new URLSearchParams(location.search).get('connected')) {
+  history.replaceState(null,'','/personal');
+}
+loadReminderStatus();
+
+// ── 퀵 기록 (습관 버튼) ──
+const HABIT_DAY_NAMES = ['월','화','수','목','금','토','일'];   // 2026-09-27 토·일 추가
+function homeHabitRepeat(b){ return ['selected','weekly','everyday','weekend'].includes(b.repeat_type) ? b.repeat_type : 'daily'; }
+function homeHabitDays(b){ return String(b.repeat_days||'1,2,3,4,5').split(',').map(Number); }
+// idx: 월=1 … 일=7. 서버 habitCanTapOn 과 같은 규칙 — 평일 매일은 그대로 월~금만
+function homeHabitOnDay(b, idx){
+  const r = homeHabitRepeat(b);
+  if (r === 'weekly' || r === 'everyday') return true;
+  if (r === 'daily') return idx <= 5;
+  if (r === 'weekend') return idx >= 6;
+  return homeHabitDays(b).includes(idx);
+}
+function homeHabitDue(b, today, days){
+  const idx = days.indexOf(today) + 1;
+  return idx >= 1 && homeHabitOnDay(b, idx);
+}
+function homeHabitSchedule(b){
+  const repeat = homeHabitRepeat(b);
+  if (repeat === 'weekly') return `주 ${b.goal}회`;
+  if (repeat === 'daily') return '평일 매일';
+  if (repeat === 'everyday') return '매일';
+  if (repeat === 'weekend') return '주말만';
+  return `매주 ${homeHabitDays(b).map(d=>HABIT_DAY_NAMES[d-1]).join('·')}요일`;
+}
+function setupHomeHabitForm(form){
+  const emoji = form.elements.emoji_choice, custom = form.elements.emoji_custom;
+  const repeat = form.elements.repeat_type, picker = form.querySelector('.habit-day-picker');
+  const syncEmoji = () => { custom.hidden = emoji.value !== '__custom__'; if (!custom.hidden) custom.focus(); };
+  const syncRepeat = () => {
+    picker.hidden = repeat.value !== 'selected';
+    form.elements.goal.title = repeat.value === 'weekly' ? '주간 목표 횟수' : '하루 목표 횟수';
+  };
+  emoji.addEventListener('change', syncEmoji); repeat.addEventListener('change', syncRepeat);
+  form._syncHabit = () => { syncEmoji(); syncRepeat(); };
+  form._syncHabit();
+}
+async function loadHabits(){
+  const days = weekDates(); // 월~일
+  const d = await api(`/api/habits?from=${days[0]}&to=${days[6]}`);
+  const today = (await api('/api/me')).today;
+  const rec = {};
+  d.records.forEach(r => { (rec[r.button_id] ??= {})[r.date] = r.count; });
+  const taps = {};
+  (d.taps||[]).forEach(r => { ((taps[r.button_id] ??= {})[r.date] ??= []).push(r.tapped_time); });
+  let doneToday = 0, dueToday = 0, doneWeekly = 0, weeklyTotal = 0;
+  $('#habitGrid').innerHTML = d.buttons.map(b => {
+    const todayCnt = rec[b.id]?.[today] ?? 0;
+    const repeat = homeHabitRepeat(b), due = homeHabitDue(b, today, days);
+    const weekCnt = days.reduce((n,day)=>n+(rec[b.id]?.[day]??0),0);
+    const progress = repeat === 'weekly' ? weekCnt : todayCnt;
+    if (repeat === 'weekly') { weeklyTotal++; if (progress >= b.goal) doneWeekly++; }
+    else if (due) { dueToday++; if (progress >= b.goal) doneToday++; }
+    const todayTimes = taps[b.id]?.[today] || [];
+    const latestWeekTap = days.flatMap((day,i)=>(taps[b.id]?.[day]||[]).map(t=>`${HABIT_DAY_NAMES[i]} ${t}`)).at(-1);
+    const timeText = todayTimes.length ? ` · 기록 ${todayTimes.join(', ')}` : (repeat==='weekly' && latestWeekTap ? ` · 최근 ${latestWeekTap}` : '');
+    const progressText = repeat === 'weekly' ? `이번 주 ${progress}/${b.goal}`
+      : due ? `오늘 ${progress}/${b.goal}` : '오늘 대상 아님';
+    return `<div style="border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--card)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="tapHabit(${b.id})" ${due?'':'disabled'} class="habit-tap-main"
+          title="${due?'오늘 +1':'오늘 기록하는 항목이 아닙니다'}">${esc(b.emoji)}</button>
+        <div style="min-width:0">
+          <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.name)}</div>
+          <div style="font-size:11px;color:var(--ink3)">${homeHabitSchedule(b)} · ${progressText}${timeText}</div>
+        </div>
+        <button onclick="rmHabit(${b.id})" style="margin-left:auto;border:0;background:none;color:var(--ink3);cursor:pointer">×</button>
+      </div>
+      <div style="display:flex;gap:5px;margin-top:8px">
+        ${days.map((day,i)=>{
+          const c=rec[b.id]?.[day]??0, scheduled=homeHabitOnDay(b,i+1);
+          const time=(taps[b.id]?.[day]||[]).join(', '), title=`${day}${time?' · '+time:''}`;
+          if(!scheduled) return `<span title="${title}" class="habit-day"><i class="off">—</i>${HABIT_DAY_NAMES[i]}</span>`;
+          const bg=repeat==='weekly'?(c?'var(--ok)':'var(--line)'):(c>=b.goal?'var(--ok)':(c?'var(--warn)':'var(--line)'));
+          return `<span title="${title}" class="habit-day"><i style="background:${bg}"></i>${HABIT_DAY_NAMES[i]}</span>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('') || '<p class="sub">버튼이 없습니다. 아래에서 첫 습관 버튼을 만들어보세요.</p>';
+  const sums=[];
+  if(dueToday) sums.push(`오늘 목표 ${doneToday}/${dueToday}`); else if(d.buttons.length) sums.push('오늘 예정 없음');
+  if(weeklyTotal) sums.push(`주간 ${doneWeekly}/${weeklyTotal}`);
+  $('#qkSummary').textContent = sums.length ? ` ${sums.join(' · ')}` : '';
+}
+async function tapHabit(id){ await api(`/api/habits/${id}/tap`,{method:'POST',body:'{}'}); loadHabits(); }
+async function rmHabit(id){ if(confirm('이 버튼을 삭제할까요? (기록은 보존)')) { await api('/api/habits/'+id,{method:'DELETE'}); loadHabits(); } }
+$('#habitForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const fd = new FormData(e.target), b = Object.fromEntries(fd);
+  b.emoji = b.emoji_choice === '__custom__' ? b.emoji_custom.trim() : b.emoji_choice;
+  b.repeat_days = fd.getAll('repeat_days').map(Number);
+  delete b.emoji_choice; delete b.emoji_custom;
+  b.goal = parseInt(b.goal)||1;
+  await api('/api/habits',{method:'POST',body:JSON.stringify(b)});
+  e.target.reset(); e.target._syncHabit(); loadHabits();
+});
+setupHomeHabitForm($('#habitForm'));
+window.addEventListener('unhandledrejection',e=>{document.getElementById('personalUiStatus').textContent='일부 기록을 불러오거나 저장하지 못했습니다. 새로고침 후 다시 확인해주세요.';});
+
+(async function init(){
+  const me = await api('/api/me');
+  ME = me.email;
+  TODAY = me.today;
+  WORKLOG_DATE = TODAY;
+  $('#me').textContent = me.email;
+  $('#heroName').textContent = me.email.split('@')[0];
+  $('#schForm').date.value = TODAY;
+  await Promise.all([loadBoard(), loadWeek(), loadWorkLogs(), loadHabits(), loadPrefill(), loadChecklist(), loadVerifs()]);
+})();
+</script>
+<script src="/personal-edit.js"></script>
+<script src="/quick.js"></script>
+<script src="/membership.js"></script>
+<script src="/acc.js"></script>
+<script src="/principles.js"></script>
+<script src="/personal-ui.js"></script>
+</body>
+</html>

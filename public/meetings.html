@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>work-cycle · 회의록</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="/logo.svg?v=27-apricot">
+<link rel="stylesheet" href="/style.css">
+<style>
+.subtabs{display:flex;gap:6px;margin:6px 0 16px;border-bottom:2px solid var(--line)}
+.subtabs button{border:0;background:none;font:700 14px var(--font);color:var(--ink3);
+  padding:9px 16px;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-2px}
+.subtabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+.rec-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rec-timer{font-variant-numeric:tabular-nums;font-weight:800;color:var(--bad);min-width:52px}
+.dropzone{border:1.5px dashed var(--line);border-radius:6px;padding:18px;text-align:center;
+  color:var(--ink3);font-size:12.5px;cursor:pointer;margin:12px 0}
+.dropzone:hover{border-color:var(--accent);color:var(--accent)}
+#transcript{width:100%;min-height:170px;border:1px solid var(--line);border-radius:4px;
+  padding:10px 12px;font:400 13px var(--font);resize:vertical}
+#transcript:focus{outline:2px solid var(--accent)}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+@media(max-width:640px){.meta-grid{grid-template-columns:1fr}}
+.meta-grid label{display:block;font-size:10px;font-weight:700;color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.meta-grid input{width:100%;height:32px;border:1px solid var(--line);border-radius:3px;padding:0 10px;font:500 13px var(--font)}
+.usage{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent);
+  border-radius:9999px;padding:3px 12px;font-size:11px;font-weight:700}
+#resultMd{white-space:pre-wrap;background:var(--surface2);border:1px solid var(--line);border-radius:4px;
+  padding:14px;font-size:12.5px;line-height:1.7;max-height:420px;overflow:auto}
+.result-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.vault-collections{display:grid;gap:10px;margin:10px 0 16px}
+.vault-collection{border:1px solid var(--line);border-radius:6px;background:var(--surface2);padding:12px}
+.vault-collection-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.vault-collection-head strong{display:block;font-size:13px}
+.vault-collection-head small,.vault-doc small{display:block;color:var(--ink3);font-size:10.5px;margin-top:2px;overflow-wrap:anywhere}
+.vault-collection-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.vault-collection details{margin-top:9px;border-top:1px solid var(--line);padding-top:8px}
+.vault-collection summary{cursor:pointer;color:var(--accent);font-size:11.5px;font-weight:700}
+.vault-doc-list{display:grid;gap:6px;margin-top:8px}
+.vault-doc{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line)}
+.vault-doc:last-child{border-bottom:0}
+.vault-doc a{white-space:nowrap}
+.vault-doc-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.vault-pager{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin:12px 0 4px}
+.vault-pager button{min-width:30px;height:28px;padding:0 9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.vault-pager button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.vault-pager button:disabled{opacity:.4;cursor:default}
+.vault-pager .sub{margin:0 6px}
+/* 볼트 노트 미리보기 — 새 탭 대신 화면 안 iframe(sandbox)으로 원본 html/md를 그대로 본다 */
+.vp-panel{width:min(1100px,100%);height:min(92vh,980px);max-height:92vh;padding:0;display:flex;flex-direction:column;overflow:hidden}
+.vp-panel .em-head{margin:0;padding:12px 16px;border-bottom:1px solid var(--line);align-items:center}
+.vp-panel .em-head small{overflow-wrap:anywhere}
+.vp-tools{display:flex;gap:6px;align-items:center;margin-left:auto}
+.vp-frame{flex:1;width:100%;border:0;background:#fff;display:block}
+.vp-note{padding:6px 16px;border-top:1px solid var(--line);font-size:10.5px;color:var(--ink3)}
+@media(max-width:640px){.vp-panel{height:94vh;border-radius:10px}.vp-tools{margin-left:0;width:100%;justify-content:flex-end}.vp-panel .em-head{flex-wrap:wrap}}
+@media(max-width:640px){.vault-collection-head{display:grid}.vault-collection-actions{justify-content:flex-start}.vault-doc{grid-template-columns:1fr}.vault-doc-actions{justify-content:flex-start}}
+</style>
+<link rel="stylesheet" href="/mobile.css">
+<script src="/mobile.js" defer></script>
+</head>
+<body class="theme-airtable">
+<script src="/theme.js"></script><script src="/mode-switch.js"></script>
+<script src="/ext.js" defer></script>
+<div class="wrap">
+
+<header class="top">
+  <h1><img class="logo" src="/logo.svg?v=27-apricot" alt="">work-cycle</h1>
+  <nav class="nav-tabs">
+    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/schedule">스케줄</a><a href="/meetings" class="on">회의록</a><a href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a>
+  </nav><span class="mode-slot"></span>
+  <button class="mode-toggle" onclick="toggleDark()" title="다크 모드">◑</button>
+  <span class="me" id="me">…</span>
+</header>
+
+<div class="subtabs">
+  <button class="on" data-tab="live">회의 중 메모</button>
+  <button data-tab="create">회의록 생성</button>
+  <button data-tab="list">회의록 목록</button>
+</div>
+
+<!-- ═══════ 탭 0: 회의 중 메모 (트리형 + 누가·무엇을) ═══════ -->
+<section id="tab-live">
+  <div class="card">
+    <div class="lv-bar">
+      <select id="lvPick" title="지난 메모 열기"><option value="">— 새 메모 —</option></select>
+      <button class="btn2 ghost" id="lvNew">+ 새 메모</button>
+      <span style="flex:1"></span>
+      <span class="sub" id="lvSaved" style="display:inline;margin:0"></span>
+      <button class="btn2 ghost" id="lvBig" title="공용 화면에 띄울 때 글씨를 키웁니다">🖵 발표 모드</button>
+    </div>
+    <div class="lv-meta">
+      <label><span>회의 제목</span><input id="lvTitle" placeholder="예: 주간 운영회의"></label>
+      <label><span>날짜</span><input type="date" id="lvDate"></label>
+      <label><span>참석</span><input id="lvAtt" placeholder="@참석자1, @참석자2"></label>
+    </div>
+    <label class="lv-purpose"><span>이 회의로 정하려는 것 <i class="em-why" title="산출물 맨 위에 그대로 들어갑니다. 나중에 이 회의가 왜 있었는지 알 수 있게 적어주세요.">?</i></span>
+      <input id="lvPurpose" placeholder="예: 0.1g 충격 마커 기준을 확정하고, 누가 언제까지 반영할지 정한다"></label>
+  </div>
+
+  <div class="card" id="lvCard">
+    <h2>메모 <span class="sub" style="display:inline" id="lvHint">Enter 새 줄 · Tab 들여쓰기 · Shift+Tab 내어쓰기 · Ctrl+1~4 표시</span></h2>
+    <div class="lv-tools">
+      <button class="btn2 ghost" id="lvMic">🎙 받아쓰기</button>
+      <span class="lv-legend">
+        <b class="m-decide">◆ 결정</b><b class="m-todo">☑ 할 일</b>
+        <b class="m-need">❓ 확인 필요</b><b class="m-star">★ 중요</b>
+      </span>
+      <span style="flex:1"></span>
+      <span class="sub" id="lvCount" style="display:inline;margin:0"></span>
+    </div>
+    <p class="sub" id="lvMicNote" style="margin:0 0 8px"></p>
+    <div id="outline"></div>
+    <div class="lv-acts">
+      <button class="btn2 ghost" id="lvTodo">☑ 할 일 → 칸반 카드</button>
+      <button class="btn2 ghost" id="lvNeed">❓ 확인 필요 → 일정 요구사항</button>
+      <button class="btn2 ghost" id="lvHtml">🖨 HTML로 보기 (인쇄→PDF)</button>
+      <button class="btn2 ghost" id="lvDlHtml">⬇ HTML 내려받기</button>
+      <button class="btn2 ghost" id="lvDlMd">⬇ md 내려받기</button>
+      <button class="btn2 ghost" id="lvShare">💬 공유</button>
+      <button class="btn2" id="lvPub">회의록으로 확정 저장</button>
+      <button class="btn2 ghost danger" id="lvDel">삭제</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ 탭 1: 회의록 생성 ═══════ -->
+<section id="tab-create" style="display:none">
+  <div class="card" data-acc="mkmin">
+    <h2>녹음·자막 파일로 회의록 만들기 <span class="usage" id="usage">AI 오늘 0/20회</span></h2>
+    <p class="sub">녹음 또는 자막을 넣으면 AI가 요약·결정·할 일 회의록을 만들어 저장합니다. API 키는 서버에만 있습니다.</p>
+
+    <div class="rec-row">
+      <button class="btn2" id="recStart">녹음 시작</button>
+      <button class="btn2 ghost" id="recStop" disabled>녹음 종료</button>
+      <span class="rec-timer" id="recTimer">00:00</span>
+      <a href="https://clovanote.naver.com" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent)">클로바로 녹음하기 ↗</a>
+    </div>
+    <p class="sub" id="recNote" style="margin:6px 0 0"></p>
+
+    <div class="dropzone" id="dropzone">🎙 녹음 또는 자막 파일 선택 — 여기를 누르면 폴더가 열립니다 (.vtt · .srt · .txt)</div>
+    <input type="file" id="fileInput" accept=".vtt,.srt,.txt" style="display:none">
+
+    <label style="font-size:11px;font-weight:700;color:var(--ink3)">녹음 텍스트 (직접 수정 가능)</label>
+    <textarea id="transcript" placeholder="자막 파일을 선택하거나 녹음을 시작하면 여기에 텍스트가 채워집니다."></textarea>
+
+    <div class="meta-grid">
+      <div><label>회의 날짜 *</label><input type="date" id="mDate" required></div>
+      <div><label>회의 시간 (선택)</label><input type="time" id="mTime"></div>
+      <div><label>참석자 (선택)</label><input id="mAtt" placeholder="@참석자1, @참석자2"></div>
+      <div><label>회의 주제 (선택)</label><input id="mTopic" placeholder="예: 주간 운영회의"></div>
+    </div>
+
+    <button class="btn2" id="genBtn" style="width:100%;justify-content:center;margin-top:14px;height:38px">AI 요약 → 회의록 생성 & 저장</button>
+    <p class="sub" id="genNote" style="margin:8px 0 0">회의 날짜는 필수입니다. 생성된 회의록은 목록에 저장되고 아래에 미리보기가 뜹니다.</p>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none">
+    <h2 id="resultTitle">생성된 회의록</h2>
+    <div id="resultMd"></div>
+    <div class="result-actions">
+      <button class="btn2" onclick="downloadMd()">md 내려받기</button>
+      <button class="btn2 ghost" onclick="copyMd()">복사</button>
+      <button class="btn2 ghost" onclick="toKanban()">할 일 → 칸반 카드</button>
+      <button class="btn2 ghost" onclick="toIssue()">GitHub 이슈 생성</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ 탭 2: 회의록 목록 ═══════ -->
+<section id="tab-list" style="display:none">
+  <div class="card" data-acc="vault" id="vaultCard">
+    <!-- 제목은 h2 하나 (acc.js가 첫 h2를 접기 버튼으로 쓴다) — 안의 글자만 모드에 따라 하나 보인다 -->
+    <h2>📓 <span class="vault-company">옵시디언에서 회의록 가져오기</span><span class="vault-personal">내 볼트(ME)에서 노트 가져오기</span></h2>
+    <!-- 팀용: 그날 폴더 하나 ({VAULT_DIR}/N월/N월DD일) -->
+    <p class="sub vault-company">볼트(GitHub 미러)의 그날 폴더에 있는 노트를 앱으로 가져옵니다 · 가져온 뒤 읽음 처리하면 <b>회의록 읽기</b> 단계가 완료됩니다</p>
+    <form class="inline vault-company" id="vaultForm">
+      <input type="date" id="vDate" required>
+      <button class="btn2">불러오기</button>
+    </form>
+    <!-- 개인용: 저장소 전체 인덱스에서 개인 폴더만 · 처음에는 최근 14일 날짜순 (/api/vault/index) -->
+    <p class="sub vault-personal">개인 폴더의 md·html 노트를 읽습니다 · <b>docs 전체</b>와 <b>01-History의 하위 폴더</b>는 문서 묶음으로 보여주고 README를 대표 문서로 우선합니다 · 01-History 루트 파일은 기존처럼 개별 노트로 유지합니다 · 묶음 안의 개별 md·html도 바로 열 수 있습니다 · 처음에는 <b>최근 14일</b> 날짜순, 폴더를 고르면 그 폴더 전체를 봅니다</p>
+    <form class="inline vault-personal" id="vaultIndexForm">
+      <select id="viFolder" aria-label="폴더"><option value="">전체 폴더 · 최근 14일</option></select>
+      <input id="viQ" placeholder="검색 (경로·제목)" style="flex:1;min-width:140px">
+      <button class="btn2">불러오기</button>
+    </form>
+    <div id="vlist"></div>
+  </div>
+
+  <div class="card" data-acc="minlink" data-acc-default="closed">
+    <h2>회의록 등록 (링크만)</h2>
+    <p class="sub">외부에 원문이 있는 회의는 제목과 링크만 저장합니다 (link_only)</p>
+    <form class="inline" id="meetForm">
+      <input type="date" name="date" required>
+      <input name="title" placeholder="회의 제목" required style="flex:1;min-width:160px">
+      <input name="link" placeholder="원문 링크 (선택)" style="flex:1;min-width:160px">
+      <button class="btn2">등록</button>
+    </form>
+  </div>
+
+  <div class="card" data-acc="minlist">
+    <h2>회의록 목록</h2>
+    <p class="sub" id="mlistSub">읽음 처리하면 다음 업무일의 '회의록 읽기' 단계가 완료됩니다 · 금요일 회의록은 월요일에 읽습니다</p>
+    <div class="mrow head"><span>날짜</span><span>제목</span><span>읽음</span><span>동작</span></div>
+    <form id="meetingFilters" class="meeting-toolbar"><label>회의록 검색<input id="meetingSearch" type="search" placeholder="제목 또는 날짜"></label><label><input id="meetingUnread" type="checkbox"> 안 읽은 회의만</label><button type="submit" class="btn2 ghost">검색</button></form><div id="mlist"></div>
+  </div>
+
+  <div class="card" data-acc="gitdef" data-acc-default="closed">
+    <h2>기본 git 대상</h2>
+    <p class="sub">회의록 → 이슈 생성 시 사용할 repo / Project 번호</p>
+    <form class="gitbox" id="gitForm">
+      <div><label>repo (owner/repo)</label><input name="repo" placeholder="feed-mina/work-cycle" required></div>
+      <div><label>Project # (선택)</label><input name="project_no" type="number" placeholder="1"></div>
+      <button class="btn2">저장</button>
+    </form>
+    <p class="sub" id="gitNow" style="margin:10px 0 0"></p>
+  </div>
+</section>
+
+<footer>work-cycle</footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = async (path, opt) => {
+  const r = await fetch(path, opt ? { headers:{'Content-Type':'application/json'}, ...opt } : undefined);
+  if (!r.ok) { alert((await r.json().catch(()=>({}))).error || '요청 실패'); throw new ApiError(path); }
+  return r.json();
+};
+function esc(s){ return (s??'').toString().replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+const BARS = ['#18BFFF','#FCB400','#F82B60','#8B46FF','#20C933','#FF6F2C'];
+let ME = null, LAST = null; // LAST = {id, md, title, date}
+
+// ── 탭 전환 ──
+document.querySelectorAll('.subtabs button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.subtabs button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  const t = b.dataset.tab;
+  $('#tab-live').style.display   = t === 'live'   ? '' : 'none';
+  $('#tab-create').style.display = t === 'create' ? '' : 'none';
+  $('#tab-list').style.display   = t === 'list'   ? '' : 'none';
+  if (t === 'list') loadMeetings();
+  if (t === 'live') lvBoot();
+}));
+
+// ── 녹음 (Web Speech API — Chrome) ──
+let rec = null, recSec = 0, recTick = null;
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) $('#recNote').textContent = '이 브라우저는 음성 인식을 지원하지 않습니다 (Chrome 권장). 자막 파일 업로드를 이용하세요.';
+$('#recStart').addEventListener('click', () => {
+  if (!SR) return alert('이 브라우저는 음성 인식을 지원하지 않습니다. 자막 파일을 업로드하세요.');
+  rec = new SR(); rec.lang = 'ko-KR'; rec.continuous = true; rec.interimResults = false;
+  rec.onresult = e => {
+    for (let i = e.resultIndex; i < e.results.length; i++)
+      if (e.results[i].isFinal) $('#transcript').value += e.results[i][0].transcript + '\n';
+  };
+  rec.onerror = e => { $('#recNote').textContent = '음성 인식 오류: ' + e.error; };
+  rec.start();
+  recSec = 0; $('#recTimer').textContent = '00:00';
+  recTick = setInterval(()=>{ recSec++; $('#recTimer').textContent =
+    String(Math.floor(recSec/60)).padStart(2,'0')+':'+String(recSec%60).padStart(2,'0'); },1000);
+  $('#recStart').disabled = true; $('#recStop').disabled = false;
+  $('#recNote').textContent = '녹음 중 — 말하면 아래 텍스트에 채워집니다.';
+});
+$('#recStop').addEventListener('click', () => {
+  rec?.stop(); clearInterval(recTick);
+  $('#recStart').disabled = false; $('#recStop').disabled = true;
+  $('#recNote').textContent = '녹음 종료. 텍스트를 확인·수정한 뒤 생성 버튼을 누르세요.';
+});
+
+// ── 자막 파일 (.vtt/.srt/.txt) ──
+$('#dropzone').addEventListener('click', () => $('#fileInput').click());
+$('#fileInput').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  let text = await f.text();
+  if (/\.(vtt|srt)$/i.test(f.name)) {
+    text = text.split(/\r?\n/).filter(l =>
+      l.trim() && l.trim() !== 'WEBVTT' && !/^\d+$/.test(l.trim()) &&
+      !/\d{2}:\d{2}[:.,]\d{2,3}\s*-->/.test(l)).join('\n');
+  }
+  $('#transcript').value = text;
+  $('#recNote').textContent = `${f.name} 불러옴 (${text.length.toLocaleString()}자)`;
+});
+
+// ── AI 요약 생성 ──
+async function loadUsage(){
+  const u = await api('/api/ai/usage');
+  $('#usage').textContent = `AI 오늘 ${u.calls}/${u.limit}회` + (u.ready ? '' : ' · 키 미설정');
+}
+$('#genBtn').addEventListener('click', async () => {
+  const date = $('#mDate').value, transcript = $('#transcript').value;
+  if (!date) return alert('회의 날짜는 필수입니다');
+  if (!transcript.trim()) return alert('회의 텍스트가 비어 있습니다');
+  $('#genBtn').disabled = true; $('#genBtn').textContent = 'AI 요약 중…';
+  try {
+    const r = await api('/api/meetings/summarize', { method:'POST', body: JSON.stringify({
+      date, transcript, time: $('#mTime').value, attendees: $('#mAtt').value, topic: $('#mTopic').value,
+      title: ($('#mTopic').value || '').trim() || undefined,
+      schedule_id: FROM_SCHEDULE ? FROM_SCHEDULE.id : undefined,
+    })});
+    LAST = { id: r.id, md: r.md, date };
+    $('#resultCard').style.display = '';
+    $('#resultMd').textContent = r.md;
+    $('#usage').textContent = `AI 오늘 ${r.calls}/${r.limit}회`;
+    $('#resultCard').scrollIntoView({behavior:'smooth'});
+  } finally {
+    $('#genBtn').disabled = false; $('#genBtn').textContent = 'AI 요약 → 회의록 생성 & 저장';
+  }
+});
+function downloadMd(){
+  if (!LAST) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([LAST.md], {type:'text/markdown'}));
+  a.download = `${LAST.date}_meeting.md`; a.click();
+}
+async function copyMd(){ if (LAST) { await navigator.clipboard.writeText(LAST.md); alert('복사됐습니다'); } }
+async function toKanban(){
+  if (!LAST) return;
+  const r = await api(`/api/meetings/${LAST.id}/kanban`, { method:'POST' });
+  alert(`할 일 ${r.created}건을 칸반 카드로 만들었습니다`);
+}
+async function toIssue(){
+  if (!LAST) return;
+  const r = await api(`/api/meetings/${LAST.id}/issue`, { method:'POST' });
+  if (r.url) window.open(r.url, '_blank');
+}
+
+// ══════════════ 회의 중 메모 (트리형 아웃라이너) ══════════════
+const MK = ['', 'star', 'decide', 'todo', 'need'];
+const MK_IC = { star:'★', decide:'◆', todo:'☑', need:'❓', '':'·' };
+const MK_NM = { star:'중요', decide:'결정', todo:'할 일', need:'확인 필요', '':'표시 없음' };
+let NOTE = null;          // {id, date, title, purpose, attendees}
+let NODES = [];           // [{d,m,t,who,due}]
+let saveT = null, booted = false;
+
+function lvMark(msg){ $('#lvSaved').textContent = msg; }
+
+function nodesFromDom(){
+  return [...document.querySelectorAll('#outline .ol-row')].map(r => ({
+    d: Number(r.dataset.d) || 0,
+    m: r.dataset.m || '',
+    t: r.querySelector('.ol-t').value,
+    who: r.querySelector('.ol-who')?.value || '',
+    due: r.querySelector('.ol-due')?.value || '',
+  }));
+}
+
+function queueSave(){
+  lvMark('입력 중…');
+  clearTimeout(saveT);
+  saveT = setTimeout(saveNote, 1200);
+}
+
+async function saveNote(){
+  NODES = nodesFromDom();
+  const payload = {
+    title: $('#lvTitle').value, date: $('#lvDate').value,
+    attendees: $('#lvAtt').value, purpose: $('#lvPurpose').value,
+    outline: NODES,
+  };
+  if (!NOTE) {
+    const r = await api('/api/notes', { method:'POST', body: JSON.stringify(payload) });
+    NOTE = { id: r.id };
+    await loadNoteList();
+    $('#lvPick').value = String(r.id);
+  } else {
+    await api('/api/notes/' + NOTE.id, { method:'PUT', body: JSON.stringify(payload) });
+  }
+  const n = new Date();
+  lvMark(`저장됨 ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`);
+  countUp();
+}
+
+function countUp(){
+  const ns = nodesFromDom().filter(n => n.t.trim());
+  const c = m => ns.filter(n => n.m === m).length;
+  $('#lvCount').textContent = ns.length
+    ? `${ns.length}줄 · 결정 ${c('decide')} · 할 일 ${c('todo')} · 확인 ${c('need')}` : '';
+}
+
+/* ── 한 줄 만들기 ─────────────────────────────────────────── */
+function rowEl(node){
+  const n = node || { d:0, m:'', t:'', who:'', due:'' };
+  const el = document.createElement('div');
+  el.className = 'ol-row';
+  el.dataset.d = n.d; el.dataset.m = n.m || '';
+  el.innerHTML = `
+    <button type="button" class="ol-mk" title="표시 바꾸기 (Ctrl+1~4)">${MK_IC[n.m||'']}</button>
+    <input class="ol-t" value="${esc(n.t)}" placeholder="여기에 적으세요">
+    <span class="ol-extra">
+      <input class="ol-who" value="${esc(n.who||'')}" placeholder="누가">
+      <input class="ol-due" type="date" value="${esc(n.due||'')}" title="언제까지">
+    </span>
+    <button type="button" class="ol-x" title="이 줄 삭제">×</button>`;
+  el.style.marginLeft = (n.d * 22) + 'px';
+  return el;
+}
+
+function setDepth(row, d){
+  d = Math.max(0, Math.min(5, d));
+  row.dataset.d = d;
+  row.style.marginLeft = (d * 22) + 'px';
+}
+function setMark(row, m){
+  row.dataset.m = m;
+  row.querySelector('.ol-mk').textContent = MK_IC[m] || '·';
+  row.querySelector('.ol-mk').title = MK_NM[m] + ' (Ctrl+1~4)';
+  queueSave(); countUp();
+}
+
+function addRow(after, node){
+  const el = rowEl(node);
+  if (after) after.insertAdjacentElement('afterend', el);
+  else $('#outline').appendChild(el);
+  return el;
+}
+
+function render(nodes){
+  const box = $('#outline');
+  box.innerHTML = '';
+  (nodes && nodes.length ? nodes : [{ d:0, m:'', t:'', who:'', due:'' }]).forEach(n => box.appendChild(rowEl(n)));
+  countUp();
+}
+
+/* ── 키보드 · 클릭 ────────────────────────────────────────── */
+$('#outline').addEventListener('keydown', e => {
+  const row = e.target.closest('.ol-row'); if (!row) return;
+  const isText = e.target.classList.contains('ol-t');
+
+  if (e.ctrlKey && e.key >= '1' && e.key <= '4') {
+    e.preventDefault(); setMark(row, MK[Number(e.key)]); return;
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const prev = row.previousElementSibling;
+    const max = prev ? Number(prev.dataset.d) + 1 : 0;
+    setDepth(row, e.shiftKey ? Number(row.dataset.d) - 1 : Math.min(Number(row.dataset.d) + 1, max));
+    queueSave(); return;
+  }
+  /* 담당·기한 칸에서 Enter를 눌러도 다음 줄로 넘어간다 */
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const el = addRow(row, { d: Number(row.dataset.d), m:'', t:'', who:'', due:'' });
+    el.querySelector('.ol-t').focus();
+    queueSave(); return;
+  }
+  if (!isText) return;
+  if (e.key === 'Backspace' && e.target.value === '' && $('#outline').children.length > 1) {
+    e.preventDefault();
+    const prev = row.previousElementSibling;
+    row.remove();
+    if (prev) { const i = prev.querySelector('.ol-t'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+    queueSave(); countUp(); return;
+  }
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    const sib = e.key === 'ArrowUp' ? row.previousElementSibling : row.nextElementSibling;
+    if (sib) { e.preventDefault(); sib.querySelector('.ol-t').focus(); }
+  }
+});
+$('#outline').addEventListener('input', queueSave);
+$('#outline').addEventListener('click', e => {
+  const row = e.target.closest('.ol-row'); if (!row) return;
+  if (e.target.classList.contains('ol-mk')) {
+    setMark(row, MK[(MK.indexOf(row.dataset.m || '') + 1) % MK.length]);
+  }
+  if (e.target.classList.contains('ol-x')) {
+    if ($('#outline').children.length === 1) { render([]); queueSave(); return; }
+    row.remove(); queueSave(); countUp();
+  }
+});
+['#lvTitle','#lvDate','#lvAtt','#lvPurpose'].forEach(sel =>
+  $(sel).addEventListener('input', queueSave));
+
+/* ── 받아쓰기 (말하면 새 줄로 쌓임) ────────────────────────── */
+let lvRec = null;
+$('#lvMic').addEventListener('click', () => {
+  if (!SR) return alert('이 브라우저는 음성 인식을 지원하지 않습니다 (Chrome 권장).');
+  if (lvRec) { lvRec.stop(); return; }
+  lvRec = new SR(); lvRec.lang = 'ko-KR'; lvRec.continuous = true; lvRec.interimResults = false;
+  lvRec.onresult = ev => {
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      if (!ev.results[i].isFinal) continue;
+      const txt = ev.results[i][0].transcript.trim(); if (!txt) continue;
+      const rows = [...document.querySelectorAll('#outline .ol-row')];
+      const last = rows[rows.length - 1];
+      if (last && !last.querySelector('.ol-t').value.trim()) last.querySelector('.ol-t').value = txt;
+      else addRow(last, { d: last ? Number(last.dataset.d) : 0, m:'', t:txt, who:'', due:'' });
+      queueSave();
+    }
+  };
+  lvRec.onerror = ev => { $('#lvMicNote').textContent = '음성 인식 오류: ' + ev.error; };
+  lvRec.onend = () => { lvRec = null; $('#lvMic').textContent = '🎙 받아쓰기'; $('#lvMic').classList.remove('rec'); $('#lvMicNote').textContent = '받아쓰기 종료.'; };
+  lvRec.start();
+  $('#lvMic').textContent = '⏹ 받아쓰기 중지'; $('#lvMic').classList.add('rec');
+  $('#lvMicNote').textContent = '듣는 중 — 말하면 새 줄로 쌓입니다. 표시는 나중에 붙여도 됩니다.';
+});
+
+/* ── 발표 모드 (공용 화면) ─────────────────────────────────── */
+$('#lvBig').addEventListener('click', () => {
+  const on = document.body.classList.toggle('lv-big');
+  $('#lvBig').textContent = on ? '🖵 발표 모드 끄기' : '🖵 발표 모드';
+  try { localStorage.setItem('wc.lv.big', on ? '1' : '0'); } catch {}
+});
+
+/* ── 목록 · 새 메모 · 액션 ─────────────────────────────────── */
+async function loadNoteList(){
+  const d = await api('/api/notes');
+  $('#lvPick').innerHTML = '<option value="">— 새 메모 —</option>' + d.rows.map(r =>
+    `<option value="${r.id}">${esc(r.date)} · ${esc(r.title || '(제목 없음)')}${r.todos ? ` · 할 일 ${r.todos}` : ''}${r.meeting_id ? ' ✓확정' : ''}</option>`).join('');
+}
+$('#lvPick').addEventListener('change', async e => {
+  const id = e.target.value;
+  if (!id) return newNote();
+  const d = await api('/api/notes/' + id);
+  NOTE = { id: d.id };
+  $('#lvTitle').value = d.title || ''; $('#lvDate').value = d.date;
+  $('#lvAtt').value = d.attendees || ''; $('#lvPurpose').value = d.purpose || '';
+  render(d.outline);
+  lvMark(d.meeting_id ? '회의록으로 확정된 메모' : '불러옴');
+});
+function newNote(){
+  NOTE = null;
+  $('#lvTitle').value = ''; $('#lvAtt').value = ''; $('#lvPurpose').value = '';
+  $('#lvDate').value = new Date(Date.now() + 9*3600*1000).toISOString().slice(0,10);
+  render([]); lvMark('새 메모 — 적기 시작하면 자동 저장됩니다');
+  $('#lvPick').value = '';
+  setTimeout(()=>$('#outline .ol-t')?.focus(), 50);
+}
+$('#lvNew').addEventListener('click', newNote);
+
+async function needSaved(){
+  clearTimeout(saveT);
+  await saveNote();
+  return NOTE?.id;
+}
+$('#lvTodo').addEventListener('click', async () => {
+  // 할 일이 하나도 없는 것은 오류가 아니라 정상 상태 — 서버에 물어보지 않고 여기서 안내한다
+  const todos = nodesFromDom().filter(n => n.m === 'todo' && n.t.trim());
+  if (!todos.length) { alert('☑ 할 일로 표시한 줄이 없습니다.\n메모에서 Ctrl+3으로 표시한 뒤 다시 눌러주세요.'); return; }
+  const id = await needSaved();
+  const r = await api(`/api/notes/${id}/kanban`, { method:'POST' });
+  alert(`할 일 ${r.created}건을 칸반 카드로 만들었습니다.\n기한이 있는 건 '즉시처리', 없는 건 '전략적계획'에 들어갑니다.`);
+});
+
+// ❓ 확인 필요 → 그날 일정의 '요구사항 한 줄 확인'으로 보낸다 (HANDOFF §6-3)
+$('#lvNeed').addEventListener('click', async () => {
+  const needs = nodesFromDom().filter(n => n.m === 'need' && n.t.trim());
+  if (!needs.length) { alert('❓ 확인 필요로 표시한 줄이 없습니다.\n메모에서 Ctrl+4로 표시한 뒤 다시 눌러주세요.'); return; }
+  const date = $('#lvDate').value;
+  if (!date) { alert('회의 날짜를 먼저 넣어주세요.'); return; }
+  const { rows } = await api(`/api/schedules?from=${date}&to=${date}`);
+  const mine = (rows || []).filter(r => r.user_email === ME);
+  if (!mine.length) { alert(`${date}에 내 일정이 없습니다.\n스케줄 화면에서 일정을 먼저 만든 뒤 다시 눌러주세요.`); return; }
+
+  // 이 메모가 특정 일정에서 시작됐으면 그 일정으로, 아니면 그날 일정이 하나뿐일 때 그것으로,
+  // 여럿이면 사용자가 고른다.
+  let pick = NOTE?.schedule_id ? mine.find(r => r.id === NOTE.schedule_id) : null;
+  if (!pick && mine.length === 1) pick = mine[0];
+  if (!pick) {
+    const menu = mine.map((r, i) => `${i+1}. ${r.title}`).join('\n');
+    const ans = prompt(`어느 일정의 요구사항으로 보낼까요? 번호를 적어주세요.\n\n${menu}`, '1');
+    if (ans === null) return;
+    pick = mine[Number(ans) - 1];
+    if (!pick) { alert('없는 번호입니다.'); return; }
+  }
+
+  const added = needs.map(n => n.t.trim()).join('\n');
+  const prev = (pick.confirm_line || '').trim();
+  const merged = prev ? prev + '\n' + added : added;
+  await api('/api/schedules/' + pick.id, { method:'PATCH', body: JSON.stringify({ confirm_line: merged }) });
+  alert(`"${pick.title}" 일정의 요구사항 한 줄 확인에 ${needs.length}건을 넣었습니다.\n스케줄 화면에서 일정을 열어 [복사해서 확인 요청]을 보내세요.`);
+});
+$('#lvHtml').addEventListener('click', async () => {
+  const id = await needSaved();
+  window.open(`/api/notes/${id}/export?fmt=html&inline=1`, '_blank');
+});
+$('#lvDlHtml').addEventListener('click', async () => {
+  const id = await needSaved(); location.href = `/api/notes/${id}/export?fmt=html`;
+});
+$('#lvDlMd').addEventListener('click', async () => {
+  const id = await needSaved(); location.href = `/api/notes/${id}/export?fmt=md`;
+});
+$('#lvShare').addEventListener('click', async () => {
+  const id = await needSaved();
+  const ns = nodesFromDom().filter(n => n.t.trim());
+  const line = m => ns.filter(n => n.m === m).map(n =>
+    `· ${n.who ? '('+n.who+') ' : ''}${n.t.trim()}${n.due ? ' — '+n.due : ''}`).join('\n');
+  const text = [
+    `📝 ${$('#lvTitle').value || '회의 메모'} (${$('#lvDate').value})`,
+    $('#lvPurpose').value ? `목적: ${$('#lvPurpose').value}` : '',
+    ns.some(n=>n.m==='decide') ? `\n[결정]\n${line('decide')}` : '',
+    ns.some(n=>n.m==='todo')   ? `\n[할 일]\n${line('todo')}` : '',
+    ns.some(n=>n.m==='need')   ? `\n[확인 필요]\n${line('need')}` : '',
+  ].filter(Boolean).join('\n');
+  if (window.Kakao?.isInitialized?.()) {
+    window.Kakao.Share.sendDefault({ objectType:'text', text: text.slice(0, 190),
+      link: { webUrl: location.origin + '/meetings', mobileWebUrl: location.origin + '/meetings' } });
+  } else if (navigator.share) { navigator.share({ text }).catch(()=>{}); }
+  else { try { await navigator.clipboard.writeText(text); alert('복사됐습니다 — 채팅에 붙여넣으세요.'); }
+         catch { prompt('복사해서 공유하세요', text); } }
+});
+$('#lvPub').addEventListener('click', async () => {
+  const id = await needSaved();
+  const r = await api(`/api/notes/${id}/publish`, { method:'POST' });
+  await loadNoteList();
+  alert(r.updated ? '회의록을 갱신했습니다.' : '회의록 목록에 저장했습니다.');
+});
+$('#lvDel').addEventListener('click', async () => {
+  if (!NOTE) return newNote();
+  if (!confirm('이 메모를 삭제할까요? (확정 저장한 회의록은 남습니다)')) return;
+  await api('/api/notes/' + NOTE.id, { method:'DELETE' });
+  await loadNoteList(); newNote();
+});
+
+async function lvBoot(){
+  if (booted) return; booted = true;
+  try { if (localStorage.getItem('wc.lv.big') === '1') { document.body.classList.add('lv-big'); $('#lvBig').textContent = '🖵 발표 모드 끄기'; } } catch {}
+  if (!SR) $('#lvMicNote').textContent = '이 브라우저는 음성 인식을 지원하지 않습니다 (Chrome 권장).';
+  await loadNoteList();
+  newNote();
+  if (FROM_SCHEDULE) {
+    $('#lvTitle').value = FROM_SCHEDULE.title || '';
+    $('#lvDate').value = FROM_SCHEDULE.date || $('#lvDate').value;
+  }
+}
+window.addEventListener('beforeunload', e => {
+  if (saveT) { clearTimeout(saveT); saveNote(); }
+});
+
+// ── 목록 탭 (기존 기능) ──
+async function loadGit(){
+  const d = await api('/api/git_targets');
+  const def = d.rows.find(r=>r.is_default);
+  $('#gitNow').textContent = def ? `현재 기본: ${def.repo}${def.project_no?` · Project #${def.project_no}`:''}` : '아직 설정 안 됨';
+  if (def) $('#gitForm').repo.value = def.repo;
+}
+$('#gitForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const b = Object.fromEntries(new FormData(e.target));
+  if (b.project_no) b.project_no = parseInt(b.project_no);
+  await api('/api/git_targets',{method:'POST',body:JSON.stringify(b)});
+  loadGit();
+});
+$('#meetForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  await api('/api/meetings',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.target)))});
+  e.target.reset(); loadMeetings();
+});
+function meetingSourceHref(m){
+  const link = String(m.link || '').trim();
+  if (!link) return '';
+  // 볼트에서 가져온 full_md / full_html 회의록의 link는 URL이 아니라 저장소 내부 경로다.
+  if ((m.body_mode === 'full_md' || m.body_mode === 'full_html') && !/^[a-z][a-z0-9+.-]*:/i.test(link) && !link.startsWith('//'))
+    return '/api/vault/file?path=' + encodeURIComponent(link);
+  return link;
+}
+let MEETING_ROWS=[], MEETING_SCOPE='company', DETAIL_ID=null, DETAIL_TAB='summary', DETAIL_GENERATION=0, LIST_GENERATION=0;
+async function loadMeetings(){
+  const generation=++LIST_GENERATION;const mode=document.documentElement.dataset.workMode;const d = await api('/api/meetings');if(generation!==LIST_GENERATION||mode!==document.documentElement.dataset.workMode)return; MEETING_ROWS=d.rows;MEETING_SCOPE=d.scope;
+  const query=($('#meetingSearch')?.value||'').trim().toLowerCase(), unread=$('#meetingUnread')?.checked;
+  $('#mlist').innerHTML = d.rows.filter(m=>(!unread||!m.read_by_me)&&(!query||(m.title+' '+m.date).toLowerCase().includes(query))).map((m,i)=>`
+    <article class="mrow recbar" style="--rec:${BARS[i%BARS.length]}">
+      <span class="d">${esc(m.date)} · ${d.scope==='personal'?'개인 회의':'회사 회의'}</span>
+      <span class="name meeting-title">${esc(m.title)}</span>
+      <span class="pill2 ${m.read_by_me?'ok':'warn'}">${m.read_by_me?(d.scope==='personal'?'읽음':`읽음 ${m.read_count}/${d.team_size}`):'안 읽음'}</span>
+      <button type="button" class="btn2 ghost" onclick="openMeeting(${m.id})">회의록 열기</button>
+    </article>`).join('') || '<p class="sub">조건에 맞는 회의록이 없습니다.</p>';
+}
+function safeMeetingHref(m){const href=meetingSourceHref(m);return /^https?:\/\//i.test(href)||href.startsWith('/api/vault/file?')?href:'';}
+async function openMeeting(id){
+  const m=MEETING_ROWS.find(r=>r.id===id);if(!m)return;DETAIL_ID=id;
+  $('#mlist').hidden=true;$('#meetingFilters').hidden=true;
+  let panel=$('#meetingDetail');if(!panel){panel=document.createElement('article');panel.id='meetingDetail';panel.className='meeting-detail';$('#mlist').after(panel);}panel.hidden=false;
+  panel.innerHTML=`<button type="button" class="btn2 ghost" onclick="closeMeeting()">목록으로 돌아가기</button><h2 tabindex="-1">${esc(m.title)}</h2><p class="meeting-meta">${esc(m.date)} · ${MEETING_SCOPE==='personal'?'개인 회의':'회사 회의'} · 앱에 저장됨</p><div class="meeting-tabs" aria-label="회의록 내용">${[['summary','요약'],['original','원문'],['actions','할 일'],['history','이력']].map(([k,t])=>`<button type="button" class="btn2 ghost" data-meeting-tab="${k}" aria-pressed="${k==='summary'}" onclick="showMeetingTab('${k}')">${t}</button>`).join('')}</div><div id="meetingContent" role="region" aria-live="polite"></div><p id="meetingStatus" role="status"></p><div class="meeting-toolbar">${m.read_by_me?'<span class="pill2 ok">읽음</span>':`<button type="button" class="btn2" onclick="detailRead(${id})">읽음으로 표시</button>`}</div><details><summary>추가 동작</summary><div class="meeting-toolbar">${m.body_md?`<button class="btn2 ghost" onclick="dlListMd(${id})">마크다운 내려받기</button>`:''}${safeMeetingHref(m)?`<a class="btn2 ghost" href="${esc(safeMeetingHref(m))}" target="_blank" rel="noopener">원본 위치 열기</a>`:''}${MEETING_SCOPE==='personal'?`<button id="meetingExport" class="btn2 ghost" disabled onclick="exportMeeting(${id})">ME 보관 설정 확인 중</button>`:''}</div></details>`;
+  showMeetingTab('summary');panel.querySelector('h2').focus();if(MEETING_SCOPE==='personal'){fetch(`/api/meeting-history/${id}`).then(async r=>{const d=await r.json();if(DETAIL_ID!==id)return;const b=$('#meetingExport');if(b){b.disabled=!r.ok||!d.available;b.textContent=d.available?'ME에 보관하기':'ME 보관 설정 필요';b.title=d.reason||d.error||'';}}).catch(()=>{if(DETAIL_ID===id&&$('#meetingExport'))$('#meetingExport').textContent='ME 연결 상태 확인 실패';});}
+}
+function closeMeeting(){const id=DETAIL_ID;DETAIL_ID=null;++DETAIL_GENERATION;$('#meetingDetail').hidden=true;$('#mlist').hidden=false;$('#meetingFilters').hidden=false;$('#mlist').querySelector(`button[onclick="openMeeting(${id})"]`)?.focus();}
+function meetingText(m){if(m.body_mode==='full_html'){const doc=new DOMParser().parseFromString(m.body_md||'','text/html');doc.querySelectorAll('script,style').forEach(n=>n.remove());return doc.body.textContent||'';}return m.body_md||'';}
+async function showMeetingTab(tab){
+  const m=MEETING_ROWS.find(r=>r.id===DETAIL_ID);if(!m)return;DETAIL_TAB=tab;const generation=++DETAIL_GENERATION;
+  document.querySelectorAll('[data-meeting-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.meetingTab===tab)));
+  const body=meetingText(m);const box=$('#meetingContent');box.replaceChildren();
+  let text=body;
+  if(tab==='summary'){const match=body.match(/(?:^|\n)##?\s*요약[^\n]*\n([\s\S]*?)(?=\n##?\s|$)/);text=match?.[1]?.trim()||(body?'별도 요약 항목이 없습니다. 원문 탭에서 저장된 내용을 확인하세요.':'저장된 본문이 없습니다. 추가 동작에서 원본 위치를 확인하세요.');}
+  if(tab==='actions'){const items=body.match(/^\s*- \[ \] .+$/gm)||[];text=items.length?items.join('\n'):'저장된 할 일 항목이 없습니다.';}
+  if(tab==='original'&&body)text='앱에 저장된 회의록 본문 (녹취 원본과 다를 수 있습니다)\n\n'+body;
+  if(tab==='original'&&!body)text='원문 본문은 앱에 저장하지 않았습니다. 추가 동작에서 원본 위치를 열 수 있습니다.';
+  if(tab==='history'){text='앱 저장: 저장됨\nME 보관: 상태 확인 중';if(MEETING_SCOPE==='personal'){const r=await fetch(`/api/meeting-history/${m.id}`).catch(()=>null);if(!r){if(DETAIL_ID!==m.id||DETAIL_TAB!==tab||generation!==DETAIL_GENERATION)return;box.textContent='보관 상태를 확인하지 못했습니다. 다시 이력 탭을 눌러주세요.';return;}if(DETAIL_ID!==m.id||DETAIL_TAB!==tab||generation!==DETAIL_GENERATION)return;const d=await r.json();if(DETAIL_ID!==m.id||DETAIL_TAB!==tab||generation!==DETAIL_GENERATION)return;text=r.ok?'앱 저장: 저장됨\nME 보관: '+({uploaded:'보관됨',unchanged:'변경 없음',error:'보관 실패',conflict:'원격 수정 충돌',pending:'진행 중',failed:'보관 실패',never:'미보관',not_exported:'미보관',disabled:'설정 필요'}[d.status]||d.status||'미보관')+(d.path?'\n경로: '+d.path:'')+(d.changed_since_export?'\n앱 수정됨 · 다시 보관 필요':'')+(d.exported_at?'\n최근 보관: '+d.exported_at:'')+(d.commit_sha?'\nGitHub 변경 번호: '+d.commit_sha.slice(0,7):'')+(d.error?'\n오류: '+d.error:'')+(d.attempts?.length?'\n\n보관 시도 이력\n'+d.attempts.map(a=>(a.created_at||a.attempted_at||'')+' · '+({uploaded:'보관됨',unchanged:'변경 없음',failed:'실패',conflict:'충돌'}[a.status]||a.status)).join('\n'):''):'앱 저장: 저장됨\nME 보관 상태: '+(d.error||'확인할 수 없음');}else text='앱 저장: 저장됨\n회사 회의는 개인 ME에 보관하지 않습니다.';}
+  const pre=document.createElement('p');pre.className='meeting-text';pre.textContent=text;box.append(pre);
+}
+async function detailRead(id){const generation=DETAIL_GENERATION;await markRead(id);if(DETAIL_ID!==id||DETAIL_GENERATION!==generation)return;await openMeeting(id);$('#meetingStatus').textContent='읽음으로 표시했습니다.';}
+async function exportMeeting(id){const button=$('#meetingExport');if(button.disabled)return;button.disabled=true;const status=$('#meetingStatus');status.textContent='ME 보관 중';const r=await fetch(`/api/meeting-history/${id}/export`,{method:'POST',headers:{'Content-Type':'application/json'}}).catch(()=>null);if(!r){button.disabled=false;status.textContent='연결 실패로 보관 상태를 확인하지 못했습니다. 앱 기록은 유지됩니다.';return;}const d=await r.json();button.disabled=false;status.textContent=r.ok?'ME 보관: '+({uploaded:'보관됨',unchanged:'변경 없음'}[d.status]||d.status):(d.error||'보관하지 못했습니다. 앱 기록은 유지됩니다.');}
+$('#meetingFilters').addEventListener('submit',e=>{e.preventDefault();loadMeetings();});
+async function dlListMd(id){
+  const r = await api(`/api/meetings/${id}/md`);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([r.md], {type:'text/markdown'}));
+  a.download = `${r.date}_meeting.md`; a.click();
+}
+async function markRead(id){ await api(`/api/meetings/${id}/read`,{method:'POST'}); await loadMeetings(); }
+
+// ── 옵시디언 볼트에서 가져오기 ──
+// 회사용/개인용 판별은 mode-switch.js 가 <html data-work-mode> 로 해 둔다. 모드가 바뀌면 'wc:mode' 로 다시 그린다.
+const vaultPersonal = () => document.documentElement.dataset.workMode === 'personal';
+async function loadVault(){
+  if (vaultPersonal()) return loadVaultIndex();
+  const date = $('#vDate').value;
+  if (!date) return;
+  $('#vlist').innerHTML = '<p class="sub">불러오는 중…</p>';
+  const d = await api('/api/vault/notes?date=' + encodeURIComponent(date));
+  if (!d.rows.length) {
+    $('#vlist').innerHTML = `<p class="sub">${esc(d.note || '그날 볼트에 노트가 없습니다.')}</p>
+      <p class="sub">경로: <code>${esc(d.path)}</code></p>`;
+    return;
+  }
+  $('#vlist').innerHTML =
+    `<div class="mrow head"><span>파일</span><span>제목</span><span>크기</span><span>동작</span></div>` +
+    d.rows.map((r,i)=>`
+    <div class="mrow recbar" style="--rec:${BARS[i%BARS.length]}">
+      <span class="d">${esc(r.name.slice(0,10))}</span>
+      <span class="name">${esc(r.title)}<small>${esc(r.path)}</small></span>
+      <span>${Math.round((r.size||0)/1024)}KB</span>
+      <span style="display:flex;gap:6px;flex-wrap:wrap">${vaultBtns(r.path, r.title, 'md')}${r.imported
+        ? '<span class="pill2 ok">가져옴</span>'
+        : `<button class="btn2 ghost" style="height:26px;font-size:11px"
+             data-vault-import data-path="${esc(r.path)}" data-date="${esc(d.date)}">가져오기</button>`}</span>
+    </div>`).join('');
+}
+async function importVault(btn, path, date){
+  btn.disabled = true; btn.textContent = '가져오는 중…';
+  try {
+    const r = await api('/api/vault/import', { method:'POST', body: JSON.stringify({ path, date }) });
+    alert(r.already ? '이미 가져온 노트입니다.' : `"${r.title}" 을(를) 가져왔습니다 (${r.chars.toLocaleString()}자${r.kind === 'html' ? ' · html 정제본' : ''}).\n아래 목록에서 [읽음 처리]를 누르면 회의록 읽기 단계가 완료됩니다.`);
+    await Promise.all([loadVault(), loadMeetings()]);
+  } finally { btn.disabled = false; btn.textContent = '가져오기'; }
+}
+$('#vaultForm').addEventListener('submit', e => { e.preventDefault(); loadVault(); });
+
+// 개인용: 전체 인덱스 — 기본 최근 14일 날짜순, 폴더를 고르거나 검색하면 전체 기간
+let viFoldersFilled = false;
+async function loadVaultIndex(){
+  const folder = $('#viFolder').value, q = $('#viQ').value.trim();
+  $('#vlist').innerHTML = '<p class="sub">불러오는 중…</p>';
+  const p = new URLSearchParams();
+  if (folder) p.set('folder', folder);
+  if (q) p.set('q', q);
+  if (folder || q) p.set('since', '');           // 폴더·검색은 전체 기간
+  const d = await api('/api/vault/index?' + p);
+  if (!viFoldersFilled && d.folders) {
+    viFoldersFilled = true;
+    for (const f of d.folders) {
+      const o = document.createElement('option');
+      o.value = f.folder;
+      o.textContent = (f.collection_count || 0) > 0
+        ? `${f.folder} · 문서 묶음 ${f.collection_count}개${f.flat_count ? ` · 개별 ${f.flat_count}개` : ''}`
+        : `${f.folder} (${f.count})`;
+      $('#viFolder').append(o);
+    }
+  }
+
+  VI_ITEMS = [
+    ...(Array.isArray(d.collections) ? d.collections : []).map((c) => ({ type: 'collection', c })),
+    ...d.rows.map((r) => ({ type: 'row', r })),
+  ];
+  VI_HEAD = `<p class="sub">${d.total}개 파일${(d.collections||[]).length ? ` · 문서 묶음 ${d.collections.length}개` : ''} · ${d.since ? esc(d.since) + ' 이후' : '전체 기간'} · GitHub 호출 ${d.github_calls}회${d.cached ? ' (캐시)' : ''} · 트리 ${esc(d.tree_sha)}</p>`;
+  VI_PAGE = 1;
+  renderVaultIndex();
+}
+
+// ── 개인용 목록: 5개씩 페이지 (문서 묶음 → 개별 노트 순서로 한 줄에 섞어 센다) ──
+const VI_PAGE_SIZE = 5;
+let VI_ITEMS = [], VI_HEAD = '', VI_PAGE = 1;
+const kstToday = () => new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);
+// 열기·미리보기 공통 주소. html은 서버가 원본 그대로(sandbox CSP), md는 읽기용 html로 바꿔 준다.
+const vaultFileUrl = (path) => '/api/vault/file?path=' + encodeURIComponent(path);
+function vaultBtns(path, title, kind, extraOpen){
+  return `<button type="button" class="btn2 ghost" style="height:26px;font-size:11px" data-vault-preview
+            data-path="${esc(path)}" data-title="${esc(title)}" data-kind="${esc(kind||'')}">미리보기</button>
+          <a class="btn2 ghost" style="height:26px;font-size:11px;line-height:26px" target="_blank" rel="noopener"
+             href="${vaultFileUrl(path)}">${extraOpen || '열기'}</a>`;
+}
+function renderVaultIndex(){
+  const total = VI_ITEMS.length;
+  if (!total) { $('#vlist').innerHTML = VI_HEAD + '<p class="sub">조건에 맞는 노트나 문서 묶음이 없습니다.</p>'; return; }
+  const pages = Math.max(1, Math.ceil(total / VI_PAGE_SIZE));
+  VI_PAGE = Math.min(Math.max(1, VI_PAGE), pages);
+  const slice = VI_ITEMS.slice((VI_PAGE-1)*VI_PAGE_SIZE, VI_PAGE*VI_PAGE_SIZE);
+
+  const cols = slice.filter(x => x.type === 'collection').map(x => x.c);
+  const rows = slice.filter(x => x.type === 'row').map(x => x.r);
+
+  const collectionHtml = cols.length ? `
+    <div class="vault-collections">
+      ${cols.map((c) => {
+        const rep = c.representative;
+        const importDate = rep.date || c.date || kstToday();
+        const readme = /^readme\.(md|html?)$/i.test(rep.name);
+        const repKind = /\.html?$/i.test(rep.name) ? 'html' : 'md';
+        return `<article class="vault-collection">
+          <div class="vault-collection-head">
+            <div>
+              <strong>${esc(c.name)}</strong>
+              <small>${c.date ? esc(c.date) + ' · ' : ''}${c.count}개 문서 · ${Math.round((c.total_size||0)/1024)}KB</small>
+              <small>${esc(c.root)}</small>
+            </div>
+            <div class="vault-collection-actions">
+              ${rep.imported
+                ? '<span class="pill2 ok">대표 가져옴</span>'
+                : `<button class="btn2 ghost" style="height:28px;font-size:11px" data-vault-import data-path="${esc(rep.path)}" data-date="${esc(importDate)}">대표 가져오기</button>`}
+              ${vaultBtns(rep.path, c.name + ' · ' + rep.name, repKind, '대표 열기')}
+            </div>
+          </div>
+          <p class="sub" style="margin:7px 0 0">대표: <b>${esc(rep.name)}</b>${readme ? ' · README 우선' : ' · README 없음 → 대표 문서 자동 선택'}</p>
+          <details>
+            <summary>개별 문서 ${c.count}개 열기</summary>
+            <div class="vault-doc-list">
+              ${c.files.map((f) => `<div class="vault-doc">
+                <div><strong>${esc(f.title)}</strong><small>${esc(f.path)} · ${f.kind} · ${Math.round((f.size||0)/1024)}KB</small></div>
+                <div class="vault-doc-actions">${vaultBtns(f.path, f.title, f.kind)}</div>
+              </div>`).join('')}
+            </div>
+          </details>
+        </article>`;
+      }).join('')}
+    </div>` : '';
+
+  const rowsHtml = rows.length ? `
+    <div class="mrow head"><span>날짜</span><span>노트</span><span>크기</span><span>동작</span></div>
+    ${rows.map((r,i)=>`
+    <div class="mrow recbar" style="--rec:${BARS[i%BARS.length]}">
+      <span class="d">${r.date ? esc(r.date.slice(5)) : '—'}</span>
+      <span class="name">${esc(r.title)} <small>${esc(r.folder)} · ${r.kind}</small><small>${esc(r.path)}</small></span>
+      <span>${Math.round((r.size||0)/1024)}KB</span>
+      <span style="display:flex;gap:6px;flex-wrap:wrap">${vaultBtns(r.path, r.title, r.kind)}${r.imported
+        ? '<span class="pill2 ok">가져옴</span>'
+        : `<button class="btn2 ghost" style="height:26px;font-size:11px"
+             data-vault-import data-path="${esc(r.path)}" data-date="${esc(r.date || kstToday())}">가져오기</button>`}</span>
+    </div>`).join('')}` : '';
+
+  // 페이지 번호: 현재 ±2 만 보여주고 양 끝은 항상 둔다
+  const nums = [];
+  for (let n = 1; n <= pages; n++) {
+    if (n === 1 || n === pages || Math.abs(n - VI_PAGE) <= 2) nums.push(n);
+    else if (nums[nums.length-1] !== '…') nums.push('…');
+  }
+  const pager = pages > 1 ? `<nav class="vault-pager" aria-label="노트 목록 페이지">
+      <button type="button" data-vi-page="${VI_PAGE-1}" ${VI_PAGE<=1?'disabled':''} aria-label="이전">‹</button>
+      ${nums.map(n => n === '…' ? '<span class="sub">…</span>'
+        : `<button type="button" data-vi-page="${n}" class="${n===VI_PAGE?'on':''}" ${n===VI_PAGE?'aria-current="page"':''}>${n}</button>`).join('')}
+      <button type="button" data-vi-page="${VI_PAGE+1}" ${VI_PAGE>=pages?'disabled':''} aria-label="다음">›</button>
+      <span class="sub">${(VI_PAGE-1)*VI_PAGE_SIZE+1}–${Math.min(total, VI_PAGE*VI_PAGE_SIZE)} / ${total}개 · ${VI_PAGE_SIZE}개씩</span>
+    </nav>` : '';
+
+  $('#vlist').innerHTML = VI_HEAD + collectionHtml + rowsHtml + pager;
+}
+
+// ── 미리보기 모달: 서버가 준 html을 sandbox iframe에 담는다 (스크립트는 돌되 앱 쿠키·API에는 못 닿음) ──
+let VP_CLOSE = null;
+function openVaultPreview(path, title, kind){
+  if (VP_CLOSE) VP_CLOSE();
+  const url = vaultFileUrl(path);
+  const back = document.createElement('div');
+  back.className = 'em-back';
+  back.innerHTML = `<div class="em-panel vp-panel" role="dialog" aria-modal="true" aria-label="${esc(title || path)} 미리보기">
+      <div class="em-head">
+        <div><b>${esc(title || path)}</b><small>${esc(path)}${kind ? ' · ' + esc(kind) : ''}</small></div>
+        <div class="vp-tools">
+          <a class="btn2 ghost" style="height:28px;font-size:11px;line-height:28px" href="${url}" target="_blank" rel="noopener">새 탭에서 열기</a>
+          ${kind === 'html' ? `<a class="btn2 ghost" style="height:28px;font-size:11px;line-height:28px" href="${url}&safe=1" target="_blank" rel="noopener" title="script를 걷어낸 정제본">정제본</a>` : ''}
+          <button type="button" class="em-x" aria-label="닫기">×</button>
+        </div>
+      </div>
+      <iframe class="vp-frame" title="${esc(title || path)}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" src="${url}"></iframe>
+      <div class="vp-note">${kind === 'html' ? '원본 html을 그대로 그립니다 · 격리(sandbox)된 창이라 로그인 쿠키·앱 API에는 닿지 않습니다' : 'md를 읽기용 html로 바꿔 보여줍니다'} · Esc 닫기</div>
+    </div>`;
+  const close = () => {
+    back.classList.remove('on');
+    document.removeEventListener('keydown', onKey);
+    setTimeout(() => back.remove(), 150);
+    VP_CLOSE = null;
+  };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  back.addEventListener('click', (e) => { if (e.target === back || e.target.closest('.em-x')) close(); });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(back);
+  requestAnimationFrame(() => back.classList.add('on'));
+  VP_CLOSE = close;
+}
+
+$('#vaultIndexForm').addEventListener('submit', e => { e.preventDefault(); loadVaultIndex(); });
+$('#vlist').addEventListener('click', e => {
+  const pg = e.target.closest?.('[data-vi-page]');
+  if (pg) { VI_PAGE = Number(pg.dataset.viPage) || 1; renderVaultIndex(); $('#vaultCard').scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
+  const pv = e.target.closest?.('[data-vault-preview]');
+  if (pv) { openVaultPreview(pv.dataset.path || '', pv.dataset.title || '', pv.dataset.kind || ''); return; }
+  const btn = e.target.closest?.('[data-vault-import]');
+  if (!btn) return;
+  importVault(btn, btn.dataset.path || '', btn.dataset.date || kstToday());
+});
+document.addEventListener('wc:mode', () => { if ($('#tab-list').style.display !== 'none') loadVault(); });
+async function makeIssue(id){
+  const r = await api(`/api/meetings/${id}/issue`,{method:'POST'});
+  if (r.url) window.open(r.url,'_blank');
+  loadMeetings();
+}
+
+// 스케줄에서 넘어온 회의 (일정 상세 → "회의록 쓰기")
+let FROM_SCHEDULE = null;
+function applyScheduleHandoff(){
+  const q = new URLSearchParams(location.search);
+  const id = Number(q.get('schedule_id'));
+  if (!id) return;
+  FROM_SCHEDULE = { id, title: q.get('title') || '', date: q.get('date') || '' };
+  if (FROM_SCHEDULE.date) $('#mDate').value = FROM_SCHEDULE.date;
+  if (FROM_SCHEDULE.title) $('#mTopic').value = FROM_SCHEDULE.title;
+  const note = $('#genNote');
+  if (note) note.innerHTML = `이 회의록은 일정 <b>${(FROM_SCHEDULE.title||'').replace(/[<>&]/g,'')}</b>에 묶여 저장됩니다.`;
+  history.replaceState(null, '', '/meetings');
+}
+
+// ── 개인용 문구: 회사 예시·규칙 대신 개인 예시로 (회사용은 HTML 원문 그대로) ──
+const COMPANY_COPY = {};
+function applyPersonalCopy(){
+  const personal = document.documentElement.dataset.workMode === 'personal';
+  const map = [
+    ['#lvTitle', 'placeholder', '예: 포트폴리오 정리'],
+    ['#lvAtt', 'placeholder', '나'],
+    ['#lvPurpose', 'placeholder', '예: 이번 주 지원할 회사 2곳과 준비 순서를 정한다'],
+    ['#mAtt', 'placeholder', '나'],
+    ['#mTopic', 'placeholder', '예: 포트폴리오 정리'],
+    ['#mlistSub', 'textContent', '읽음 처리하면 오늘 개인 사이클의 회의록 읽기가 완료됩니다'],
+  ];
+  for (const [sel, prop, text] of map) {
+    const el = document.querySelector(sel); if (!el) continue;
+    if (!(sel in COMPANY_COPY)) COMPANY_COPY[sel] = el[prop];      // 회사용 원문 보관
+    el[prop] = personal ? text : COMPANY_COPY[sel];
+  }
+}
+applyPersonalCopy();
+document.addEventListener('wc:mode', () => {applyPersonalCopy();if(DETAIL_ID!==null)closeMeeting();loadMeetings();});
+
+(async function(){
+  const me = await api('/api/me'); ME = me.email; $('#me').textContent = me.email;
+  const params = new URLSearchParams(location.search);
+  const readDate = params.get('date');
+  $('#mDate').value = me.today;
+  $('#vDate').value = /^\d{4}-\d{2}-\d{2}$/.test(readDate || '') ? readDate : me.today;
+  const WANT_TAB = params.get('tab');
+  applyScheduleHandoff();
+  $('#meetForm').date.value = me.today;
+  await lvBoot();                       // 기본 탭 = 회의 중 메모
+  await Promise.all([loadUsage(), loadGit(), loadMeetings()]);
+  // ?tab=list 로 들어오면 목록 탭을 연다 (마이페이지 '회의록 읽기' 카드에서 넘어옴).
+  // lvBoot()가 기본 탭을 잡으므로 반드시 그 뒤에 눌러야 한다.
+  if(WANT_TAB==='create')document.querySelector('.subtabs button[data-tab="create"]')?.click();
+  if (WANT_TAB === 'list' || location.hash === '#list') {
+    document.querySelector('.subtabs button[data-tab="list"]')?.click();
+    const card=$('#mlist').closest('.card');if(card?.classList.contains('closed'))card.querySelector('h2')?.click();
+    loadVault();
+  }
+})();
+</script>
+<script src="/quick.js"></script>
+<script src="/membership.js"></script>
+<script src="/acc.js"></script>
+<script src="/principles.js"></script>
+</body>
+</html>
