@@ -14,7 +14,11 @@
     "db:migrate3:local": "wrangler d1 execute work-cycle-db --local --file=./migrations/0003_meeting_ai.sql",
     "db:migrate3": "wrangler d1 execute work-cycle-db --remote --file=./migrations/0003_meeting_ai.sql",
     "db:migrate4:local": "wrangler d1 execute work-cycle-db --local --file=./migrations/0004_habits.sql",
-    "db:migrate4": "wrangler d1 execute work-cycle-db --remote --file=./migrations/0004_habits.sql"
+    "db:migrate4": "wrangler d1 execute work-cycle-db --remote --file=./migrations/0004_habits.sql",
+    "portfolio:build": "node tools/build-portfolio.mjs",
+    "portfolio:dev": "node tools/build-portfolio.mjs && wrangler dev --config wrangler.portfolio.toml",
+    "portfolio:test": "node tests/portfolio-browser.test.cjs",
+    "portfolio:deploy": "node tools/build-portfolio.mjs && wrangler deploy --config wrangler.portfolio.toml"
   },
   "dependencies": {
     "hono": "^4.6.0"

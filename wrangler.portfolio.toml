@@ -1,6 +1,12 @@
+# 공개 데모 Worker — 정적 자산만 (D1·AI·cron·OAuth 없음)
+# 빌드: node tools/build-portfolio.mjs  (public/ → portfolio-dist/ + demo-api.js)
+# 배포: npx wrangler deploy --config wrangler.portfolio.toml   → https://work-cycle-portfolio.<계정서브도메인>.workers.dev
 name = "work-cycle-portfolio"
-compatibility_date = "2026-10-03"
+compatibility_date = "2026-08-01"   # 운영 wrangler.toml 과 같게 (정적 자산만이라 날짜 영향 없음 · 로컬 wrangler dev 호환)
 workers_dev = true
 
 [assets]
-directory = "./portfolio"
+directory = "./portfolio-dist"
+# /personal → personal.html (운영 Worker 와 같은 주소 규칙)
+html_handling = "auto-trailing-slash"
+not_found_handling = "none"

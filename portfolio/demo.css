@@ -1,0 +1,17 @@
+/* demo.css — 공개 데모 안내 배너와 데모에서 막는 요소 (운영 style.css 뒤에 읽힌다) */
+.demo-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 10px;padding:8px 12px;border:1px solid var(--line);
+  border-left:4px solid var(--accent);border-radius:10px;background:var(--accent-soft);color:var(--ink2);font-size:12px;line-height:1.5}
+.demo-bar-tag{font-weight:800;color:var(--accent);letter-spacing:.02em;white-space:nowrap}
+.demo-bar-text{flex:1;min-width:200px}
+.demo-bar-reset{border:1px solid var(--accent);background:var(--card);color:var(--accent);border-radius:8px;padding:5px 10px;
+  font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.demo-bar-reset:hover{background:var(--accent);color:#fff}
+.demo-bar-notice{flex-basis:100%;font-weight:700;color:var(--accent)}
+body.dark .demo-bar{background:rgba(185,79,50,.14);color:var(--ink)}
+/* 개인용 모드 고정 — 회사용/개인용 선택 상자는 숨긴다 (mode-switch.js 는 그대로 돈다) */
+html.demo .mode-slot{display:none}
+/* 바탕화면 고정 배너(.pyw 내려받기)는 데모에서 제공하지 않는다 */
+html.demo .desktop-banner-download{display:none}
+/* 외부 계정 연결 버튼은 보이되 눌러도 안내만 */
+html.demo a.demo-off{opacity:.55;cursor:not-allowed}
+@media(max-width:600px){.demo-bar{font-size:11.5px;padding:8px 10px}}
