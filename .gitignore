@@ -7,3 +7,5 @@ node_modules/
 meetings/
 uploads/
 __pycache__/
+# 공개 데모 빌드 결과 (tools/build-portfolio.mjs 가 만든다)
+portfolio-dist/
