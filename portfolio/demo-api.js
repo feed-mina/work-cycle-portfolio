@@ -627,7 +627,7 @@
     const wrap = document.querySelector(".wrap") || document.body;
     const bar = document.createElement("div");
     bar.className = "demo-bar"; bar.setAttribute("role", "note");
-    bar.innerHTML = `<span class="demo-bar-tag">공개 데모</span><span class="demo-bar-text">허구 예시 데이터 · 로그인 없음 · 기록은 이 브라우저에만 저장되고 운영 서비스와 연결되지 않습니다 · 날짜가 바뀌면 새 예시로 시작합니다</span><button type="button" class="demo-bar-reset">체험 초기화</button><span id="demoNotice" class="demo-bar-notice" role="status" aria-live="polite" hidden></span>`;
+    bar.innerHTML = `<span class="demo-bar-tag">공개 데모</span><span class="demo-bar-text">로그인 없음 · 기록은 이 브라우저에만 저장되고 운영 서비스와 연결되지 않습니다 · 날짜가 바뀌면 새 예시로 시작합니다</span><button type="button" class="demo-bar-reset">체험 초기화</button><span id="demoNotice" class="demo-bar-notice" role="status" aria-live="polite" hidden></span>`;
     bar.querySelector(".demo-bar-reset").addEventListener("click", () => { if (confirm("체험 데이터를 처음 상태로 되돌릴까요?")) reset(); });
     wrap.prepend(bar);
 
