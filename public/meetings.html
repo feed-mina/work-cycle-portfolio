@@ -49,6 +49,7 @@
 .vault-pager button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .vault-pager button:disabled{opacity:.4;cursor:default}
 .vault-pager .sub{margin:0 6px}
+#meetingPager[hidden]{display:none!important}
 /* 볼트 노트 미리보기 — 새 탭 대신 화면 안 iframe(sandbox)으로 원본 html/md를 그대로 본다 */
 .vp-panel{width:min(1100px,100%);height:min(92vh,980px);max-height:92vh;padding:0;display:flex;flex-direction:column;overflow:hidden}
 .vp-panel .em-head{margin:0;padding:12px 16px;border-bottom:1px solid var(--line);align-items:center}
@@ -58,9 +59,15 @@
 .vp-note{padding:6px 16px;border-top:1px solid var(--line);font-size:10.5px;color:var(--ink3)}
 @media(max-width:640px){.vp-panel{height:94vh;border-radius:10px}.vp-tools{margin-left:0;width:100%;justify-content:flex-end}.vp-panel .em-head{flex-wrap:wrap}}
 @media(max-width:640px){.vault-collection-head{display:grid}.vault-collection-actions{justify-content:flex-start}.vault-doc{grid-template-columns:1fr}.vault-doc-actions{justify-content:flex-start}}
+
+.meeting-share-panel{margin-top:24px;padding:22px;border:1px solid var(--line,#deded8);background:var(--card,#fff);border-radius:14px;overflow-wrap:anywhere}
+.meeting-share-panel h3{margin:0}.meeting-share-panel label{display:block;margin:16px 0}.meeting-share-panel input[data-url]{width:100%;max-width:100%;padding:10px;min-width:0}.meeting-share-check{display:flex!important;gap:10px;align-items:flex-start}.meeting-share-check input{flex:0 0 auto;margin-top:6px}.vault-select-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0}.vault-select-check{display:flex;gap:10px;align-items:flex-start;min-width:0}.vault-select-check input{width:19px;height:19px;flex:0 0 auto;margin-top:5px}.vault-selection-result{white-space:pre-line;overflow-wrap:anywhere;font-size:13px;line-height:1.8}.vault-select-footer{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px 0}.vault-select-footer button{min-height:44px}.meeting-share-panel [hidden]{display:none!important}
 </style>
 <link rel="stylesheet" href="/mobile.css">
 <script src="/mobile.js" defer></script>
+<script src="/meeting-sharing.js" defer></script>
+<script src="/meeting-share-manager.js" defer></script>
+<link rel="stylesheet" href="/meeting-share-manager.css">
 </head>
 <body class="theme-airtable">
 <script src="/theme.js"></script><script src="/mode-switch.js"></script>
@@ -70,7 +77,7 @@
 <header class="top">
   <h1><img class="logo" src="/logo.svg?v=27-apricot" alt="">work-cycle</h1>
   <nav class="nav-tabs">
-    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/schedule">스케줄</a><a href="/meetings" class="on">회의록</a><a href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a>
+    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/roadmap" data-mode="personal">통합 로드맵</a><a href="/schedule">스케줄</a><a href="/meetings" class="on">회의록</a><a href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a>
   </nav><span class="mode-slot"></span>
   <button class="mode-toggle" onclick="toggleDark()" title="다크 모드">◑</button>
   <span class="me" id="me">…</span>
@@ -95,7 +102,7 @@
     <div class="lv-meta">
       <label><span>회의 제목</span><input id="lvTitle" placeholder="예: 주간 운영회의"></label>
       <label><span>날짜</span><input type="date" id="lvDate"></label>
-      <label><span>참석</span><input id="lvAtt" placeholder="@참석자1, @참석자2"></label>
+      <label><span>참석</span><input id="lvAtt" placeholder="@예시 진행자, @예시 기록자"></label>
     </div>
     <label class="lv-purpose"><span>이 회의로 정하려는 것 <i class="em-why" title="산출물 맨 위에 그대로 들어갑니다. 나중에 이 회의가 왜 있었는지 알 수 있게 적어주세요.">?</i></span>
       <input id="lvPurpose" placeholder="예: 0.1g 충격 마커 기준을 확정하고, 누가 언제까지 반영할지 정한다"></label>
@@ -150,7 +157,7 @@
     <div class="meta-grid">
       <div><label>회의 날짜 *</label><input type="date" id="mDate" required></div>
       <div><label>회의 시간 (선택)</label><input type="time" id="mTime"></div>
-      <div><label>참석자 (선택)</label><input id="mAtt" placeholder="@참석자1, @참석자2"></div>
+      <div><label>참석자 (선택)</label><input id="mAtt" placeholder="@예시 진행자, @예시 기록자"></div>
       <div><label>회의 주제 (선택)</label><input id="mTopic" placeholder="예: 주간 운영회의"></div>
     </div>
 
@@ -175,14 +182,14 @@
   <div class="card" data-acc="vault" id="vaultCard">
     <!-- 제목은 h2 하나 (acc.js가 첫 h2를 접기 버튼으로 쓴다) — 안의 글자만 모드에 따라 하나 보인다 -->
     <h2>📓 <span class="vault-company">옵시디언에서 회의록 가져오기</span><span class="vault-personal">내 볼트(ME)에서 노트 가져오기</span></h2>
-    <!-- 팀용: 그날 폴더 하나 ({VAULT_DIR}/N월/N월DD일) -->
+    <!-- 회사용: 그날 폴더 하나 (예시 폴더/월/일) -->
     <p class="sub vault-company">볼트(GitHub 미러)의 그날 폴더에 있는 노트를 앱으로 가져옵니다 · 가져온 뒤 읽음 처리하면 <b>회의록 읽기</b> 단계가 완료됩니다</p>
     <form class="inline vault-company" id="vaultForm">
       <input type="date" id="vDate" required>
       <button class="btn2">불러오기</button>
     </form>
-    <!-- 개인용: 저장소 전체 인덱스에서 개인 폴더만 · 처음에는 최근 14일 날짜순 (/api/vault/index) -->
-    <p class="sub vault-personal">개인 폴더의 md·html 노트를 읽습니다 · <b>docs 전체</b>와 <b>01-History의 하위 폴더</b>는 문서 묶음으로 보여주고 README를 대표 문서로 우선합니다 · 01-History 루트 파일은 기존처럼 개별 노트로 유지합니다 · 묶음 안의 개별 md·html도 바로 열 수 있습니다 · 처음에는 <b>최근 14일</b> 날짜순, 폴더를 고르면 그 폴더 전체를 봅니다</p>
+    <!-- 개인용: 저장소 전체 인덱스에서 개인 폴더만 · 처음에는 최근 14일 최신순 (/api/vault/index) -->
+    <p class="sub vault-personal">개인 폴더의 md·html 노트를 읽습니다 · <b>05-Assets</b>도 포함합니다 · <b>docs 전체</b>와 <b>01-History·05-Assets의 하위 폴더</b>는 문서 묶음으로 보여주고 README를 대표 문서로 우선합니다 · 01-History·05-Assets 루트 파일은 개별 노트로 보여줍니다 · 묶음 안의 개별 md·html도 바로 열 수 있습니다 · 처음에는 <b>최근 14일</b>을 <b>최신순</b>(날짜 → 이름 끝 시분초, 예: plan-161645)으로, 문서 묶음과 개별 노트를 함께 정렬합니다 · 폴더를 고르면 그 폴더 전체를 봅니다 · 날짜 없는 문서는 폴더를 골라 확인하세요</p>
     <form class="inline vault-personal" id="vaultIndexForm">
       <select id="viFolder" aria-label="폴더"><option value="">전체 폴더 · 최근 14일</option></select>
       <input id="viQ" placeholder="검색 (경로·제목)" style="flex:1;min-width:140px">
@@ -207,7 +214,21 @@
     <p class="sub" id="mlistSub">읽음 처리하면 다음 업무일의 '회의록 읽기' 단계가 완료됩니다 · 금요일 회의록은 월요일에 읽습니다</p>
     <div class="mrow head"><span>날짜</span><span>제목</span><span>읽음</span><span>동작</span></div>
     <form id="meetingFilters" class="meeting-toolbar"><label>회의록 검색<input id="meetingSearch" type="search" placeholder="제목 또는 날짜"></label><label><input id="meetingUnread" type="checkbox"> 안 읽은 회의만</label><button type="submit" class="btn2 ghost">검색</button></form><div id="mlist"></div>
+    <nav id="meetingPager" class="vault-pager" aria-label="회의록 페이지"></nav>
   </div>
+
+  <section class="card share-manager" id="meetingShareManager" aria-labelledby="shareManagerTitle">
+    <div class="share-manager-head"><div><h2 id="shareManagerTitle">공유 관리</h2><p class="sub">내가 공유한 회의록을 확인하고, 외부 열람을 중지할 수 있어요.</p></div><button type="button" class="btn2 ghost" id="shareManagerToggle" aria-expanded="true" aria-controls="shareManagerBody">접기</button></div>
+    <div id="shareManagerBody">
+      <div class="share-manager-filters" role="group" aria-label="공유 상태"><button type="button" class="btn2" data-share-filter="all" aria-pressed="true">전체</button><button type="button" class="btn2 ghost" data-share-filter="active" aria-pressed="false">공유 중</button><button type="button" class="btn2 ghost" data-share-filter="expired" aria-pressed="false">만료</button><button type="button" class="btn2 ghost" data-share-filter="revoked" aria-pressed="false">중지</button></div>
+      <form id="shareManagerSearch" class="share-manager-tools"><input id="shareManagerQuery" type="search" maxlength="200" placeholder="공유한 문서 제목 검색" aria-label="공유한 문서 제목 검색"><select id="shareManagerSort" aria-label="공유 목록 정렬"><option value="new">최근 공유순</option><option value="old">오래된 공유순</option></select><button class="btn2 ghost">검색</button><button type="button" class="btn2 ghost" id="shareManagerRefresh">새로고침</button></form>
+      <p id="shareManagerStatus" role="status" aria-live="polite"></p><div id="shareManagerRows"></div>
+      <div id="shareManagerConfirm" class="share-manager-confirm" hidden><h3>이 문서의 공유를 중지할까요?</h3><p id="shareManagerConfirmTitle"></p><p>기존 주소로는 더 이상 열 수 없어요. 원본 회의록은 그대로 보관돼요.</p><div class="meeting-toolbar"><button type="button" class="btn2 ghost" id="shareManagerCancel">취소</button><button type="button" class="btn2" id="shareManagerStop">공유 중지</button></div></div>
+      <div class="share-manager-pager" id="shareManagerPager"></div>
+      <p class="sub">서버에는 주소의 해시값만 보관합니다. 이 페이지에서 새로 만든 주소는 복사할 수 있어요. 이전 주소가 필요하면 원문에서 새 링크를 만들어 주세요. 새 링크를 만들면 이전 링크는 중지됩니다.</p>
+      <p class="sub">상대방이 이미 복사하거나 내려받은 내용은 회수할 수 없습니다.</p>
+    </div>
+  </section>
 
   <div class="card" data-acc="gitdef" data-acc-default="closed">
     <h2>기본 git 대상</h2>
@@ -658,27 +679,33 @@ function meetingSourceHref(m){
     return '/api/vault/file?path=' + encodeURIComponent(link);
   return link;
 }
-let MEETING_ROWS=[], MEETING_SCOPE='company', DETAIL_ID=null, DETAIL_TAB='summary', DETAIL_GENERATION=0, LIST_GENERATION=0;
+let MEETING_ROWS=[], MEETING_SCOPE='company', DETAIL_ID=null, DETAIL_TAB='summary', DETAIL_GENERATION=0, LIST_GENERATION=0, MEETING_PAGE=1;
 async function loadMeetings(){
-  const generation=++LIST_GENERATION;const mode=document.documentElement.dataset.workMode;const d = await api('/api/meetings');if(generation!==LIST_GENERATION||mode!==document.documentElement.dataset.workMode)return; MEETING_ROWS=d.rows;MEETING_SCOPE=d.scope;
-  const query=($('#meetingSearch')?.value||'').trim().toLowerCase(), unread=$('#meetingUnread')?.checked;
-  $('#mlist').innerHTML = d.rows.filter(m=>(!unread||!m.read_by_me)&&(!query||(m.title+' '+m.date).toLowerCase().includes(query))).map((m,i)=>`
+  const generation=++LIST_GENERATION,mode=document.documentElement.dataset.workMode;
+  const params=new URLSearchParams({page:String(MEETING_PAGE),q:($('#meetingSearch')?.value||'').trim(),unread:$('#meetingUnread')?.checked?'1':'0'});
+  const d=await api('/api/meetings?'+params);if(generation!==LIST_GENERATION||mode!==document.documentElement.dataset.workMode)return;
+  const detail=MEETING_ROWS.find(m=>m.id===DETAIL_ID);MEETING_ROWS=d.rows.slice();if(detail&&!MEETING_ROWS.some(m=>m.id===detail.id))MEETING_ROWS.push(detail);MEETING_SCOPE=d.scope;MEETING_PAGE=d.page;
+  $('#mlist').innerHTML = d.rows.map((m,i)=>`
     <article class="mrow recbar" style="--rec:${BARS[i%BARS.length]}">
       <span class="d">${esc(m.date)} · ${d.scope==='personal'?'개인 회의':'회사 회의'}</span>
       <span class="name meeting-title">${esc(m.title)}</span>
       <span class="pill2 ${m.read_by_me?'ok':'warn'}">${m.read_by_me?(d.scope==='personal'?'읽음':`읽음 ${m.read_count}/${d.team_size}`):'안 읽음'}</span>
       <button type="button" class="btn2 ghost" onclick="openMeeting(${m.id})">회의록 열기</button>
     </article>`).join('') || '<p class="sub">조건에 맞는 회의록이 없습니다.</p>';
+  const from=d.total?(d.page-1)*d.page_size+1:0,to=Math.min(d.page*d.page_size,d.total);
+  $('#meetingPager').innerHTML=`<button type="button" data-meeting-page="${d.page-1}" ${d.page<=1?'disabled':''}>이전</button><span class="sub">${d.page} / ${d.pages} · ${from}–${to} / ${d.total}개 · 5개씩</span><button type="button" data-meeting-page="${d.page+1}" ${d.page>=d.pages?'disabled':''}>다음</button>`;
+  $('#meetingPager').hidden=DETAIL_ID!==null;
 }
+$('#meetingPager').addEventListener('click',e=>{const button=e.target.closest('[data-meeting-page]');if(button&&!button.disabled){MEETING_PAGE=Number(button.dataset.meetingPage);loadMeetings();}});
 function safeMeetingHref(m){const href=meetingSourceHref(m);return /^https?:\/\//i.test(href)||href.startsWith('/api/vault/file?')?href:'';}
 async function openMeeting(id){
   const m=MEETING_ROWS.find(r=>r.id===id);if(!m)return;DETAIL_ID=id;
-  $('#mlist').hidden=true;$('#meetingFilters').hidden=true;
+  $('#mlist').hidden=true;$('#meetingFilters').hidden=true;$('#meetingPager').hidden=true;
   let panel=$('#meetingDetail');if(!panel){panel=document.createElement('article');panel.id='meetingDetail';panel.className='meeting-detail';$('#mlist').after(panel);}panel.hidden=false;
-  panel.innerHTML=`<button type="button" class="btn2 ghost" onclick="closeMeeting()">목록으로 돌아가기</button><h2 tabindex="-1">${esc(m.title)}</h2><p class="meeting-meta">${esc(m.date)} · ${MEETING_SCOPE==='personal'?'개인 회의':'회사 회의'} · 앱에 저장됨</p><div class="meeting-tabs" aria-label="회의록 내용">${[['summary','요약'],['original','원문'],['actions','할 일'],['history','이력']].map(([k,t])=>`<button type="button" class="btn2 ghost" data-meeting-tab="${k}" aria-pressed="${k==='summary'}" onclick="showMeetingTab('${k}')">${t}</button>`).join('')}</div><div id="meetingContent" role="region" aria-live="polite"></div><p id="meetingStatus" role="status"></p><div class="meeting-toolbar">${m.read_by_me?'<span class="pill2 ok">읽음</span>':`<button type="button" class="btn2" onclick="detailRead(${id})">읽음으로 표시</button>`}</div><details><summary>추가 동작</summary><div class="meeting-toolbar">${m.body_md?`<button class="btn2 ghost" onclick="dlListMd(${id})">마크다운 내려받기</button>`:''}${safeMeetingHref(m)?`<a class="btn2 ghost" href="${esc(safeMeetingHref(m))}" target="_blank" rel="noopener">원본 위치 열기</a>`:''}${MEETING_SCOPE==='personal'?`<button id="meetingExport" class="btn2 ghost" disabled onclick="exportMeeting(${id})">ME 보관 설정 확인 중</button>`:''}</div></details>`;
+  panel.innerHTML=`<button type="button" class="btn2 ghost" onclick="closeMeeting()">목록으로 돌아가기</button><h2 tabindex="-1">${esc(m.title)}</h2><p class="meeting-meta">${esc(m.date)} · ${MEETING_SCOPE==='personal'?'개인 회의':'회사 회의'} · 앱에 저장됨</p><div class="meeting-tabs" aria-label="회의록 내용">${[['summary','요약'],['original','원문'],['actions','할 일'],['history','이력']].map(([k,t])=>`<button type="button" class="btn2 ghost" data-meeting-tab="${k}" aria-pressed="${k==='summary'}" onclick="showMeetingTab('${k}')">${t}</button>`).join('')}</div><div id="meetingContent" role="region" aria-live="polite"></div><p id="meetingStatus" role="status"></p><div class="meeting-toolbar"><button type="button" id="meetingShareButton" class="btn2 ghost" onclick="openMeetingShare(${id})">공유</button>${m.read_by_me?'<span class="pill2 ok">읽음</span>':`<button type="button" class="btn2" onclick="detailRead(${id})">읽음으로 표시</button>`}</div><details><summary>추가 동작</summary><div class="meeting-toolbar">${m.body_md?`<button class="btn2 ghost" onclick="dlListMd(${id})">마크다운 내려받기</button>`:''}${safeMeetingHref(m)?`<a class="btn2 ghost" href="${esc(safeMeetingHref(m))}" target="_blank" rel="noopener">원본 위치 열기</a>`:''}${MEETING_SCOPE==='personal'?`<button id="meetingExport" class="btn2 ghost" disabled onclick="exportMeeting(${id})">ME 보관 설정 확인 중</button>`:''}</div></details>`;
   showMeetingTab('summary');panel.querySelector('h2').focus();if(MEETING_SCOPE==='personal'){fetch(`/api/meeting-history/${id}`).then(async r=>{const d=await r.json();if(DETAIL_ID!==id)return;const b=$('#meetingExport');if(b){b.disabled=!r.ok||!d.available;b.textContent=d.available?'ME에 보관하기':'ME 보관 설정 필요';b.title=d.reason||d.error||'';}}).catch(()=>{if(DETAIL_ID===id&&$('#meetingExport'))$('#meetingExport').textContent='ME 연결 상태 확인 실패';});}
 }
-function closeMeeting(){const id=DETAIL_ID;DETAIL_ID=null;++DETAIL_GENERATION;$('#meetingDetail').hidden=true;$('#mlist').hidden=false;$('#meetingFilters').hidden=false;$('#mlist').querySelector(`button[onclick="openMeeting(${id})"]`)?.focus();}
+function closeMeeting(){const id=DETAIL_ID;DETAIL_ID=null;++DETAIL_GENERATION;$('#meetingDetail').hidden=true;$('#mlist').hidden=false;$('#meetingFilters').hidden=false;$('#meetingPager').hidden=false;$('#mlist').querySelector(`button[onclick="openMeeting(${id})"]`)?.focus();}
 function meetingText(m){if(m.body_mode==='full_html'){const doc=new DOMParser().parseFromString(m.body_md||'','text/html');doc.querySelectorAll('script,style').forEach(n=>n.remove());return doc.body.textContent||'';}return m.body_md||'';}
 async function showMeetingTab(tab){
   const m=MEETING_ROWS.find(r=>r.id===DETAIL_ID);if(!m)return;DETAIL_TAB=tab;const generation=++DETAIL_GENERATION;
@@ -694,14 +721,15 @@ async function showMeetingTab(tab){
 }
 async function detailRead(id){const generation=DETAIL_GENERATION;await markRead(id);if(DETAIL_ID!==id||DETAIL_GENERATION!==generation)return;await openMeeting(id);$('#meetingStatus').textContent='읽음으로 표시했습니다.';}
 async function exportMeeting(id){const button=$('#meetingExport');if(button.disabled)return;button.disabled=true;const status=$('#meetingStatus');status.textContent='ME 보관 중';const r=await fetch(`/api/meeting-history/${id}/export`,{method:'POST',headers:{'Content-Type':'application/json'}}).catch(()=>null);if(!r){button.disabled=false;status.textContent='연결 실패로 보관 상태를 확인하지 못했습니다. 앱 기록은 유지됩니다.';return;}const d=await r.json();button.disabled=false;status.textContent=r.ok?'ME 보관: '+({uploaded:'보관됨',unchanged:'변경 없음'}[d.status]||d.status):(d.error||'보관하지 못했습니다. 앱 기록은 유지됩니다.');}
-$('#meetingFilters').addEventListener('submit',e=>{e.preventDefault();loadMeetings();});
+$('#meetingFilters').addEventListener('submit',e=>{e.preventDefault();MEETING_PAGE=1;loadMeetings();});
+$('#meetingUnread').addEventListener('change',()=>{MEETING_PAGE=1;loadMeetings();});
 async function dlListMd(id){
   const r = await api(`/api/meetings/${id}/md`);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([r.md], {type:'text/markdown'}));
   a.download = `${r.date}_meeting.md`; a.click();
 }
-async function markRead(id){ await api(`/api/meetings/${id}/read`,{method:'POST'}); await loadMeetings(); }
+async function markRead(id){ await api(`/api/meetings/${id}/read`,{method:'POST'}); const row=MEETING_ROWS.find(m=>m.id===id);if(row)row.read_by_me=true;await loadMeetings(); }
 
 // ── 옵시디언 볼트에서 가져오기 ──
 // 회사용/개인용 판별은 mode-switch.js 가 <html data-work-mode> 로 해 둔다. 모드가 바뀌면 'wc:mode' 로 다시 그린다.
@@ -731,6 +759,7 @@ async function loadVault(){
     </div>`).join('');
 }
 async function importVault(btn, path, date){
+  if (VI_IMPORT_BUSY) return;
   btn.disabled = true; btn.textContent = '가져오는 중…';
   try {
     const r = await api('/api/vault/import', { method:'POST', body: JSON.stringify({ path, date }) });
@@ -740,7 +769,7 @@ async function importVault(btn, path, date){
 }
 $('#vaultForm').addEventListener('submit', e => { e.preventDefault(); loadVault(); });
 
-// 개인용: 전체 인덱스 — 기본 최근 14일 날짜순, 폴더를 고르거나 검색하면 전체 기간
+// 개인용: 전체 인덱스 — 기본 최근 14일, 최신순(날짜 → 이름 끝 시분초). 폴더를 고르거나 검색하면 전체 기간
 let viFoldersFilled = false;
 async function loadVaultIndex(){
   const folder = $('#viFolder').value, q = $('#viQ').value.trim();
@@ -765,15 +794,29 @@ async function loadVaultIndex(){
   VI_ITEMS = [
     ...(Array.isArray(d.collections) ? d.collections : []).map((c) => ({ type: 'collection', c })),
     ...d.rows.map((r) => ({ type: 'row', r })),
-  ];
+  ].sort((a, b) => vaultItemSortKey(b).localeCompare(vaultItemSortKey(a))
+    || (a.c?.root || a.r.path).localeCompare(b.c?.root || b.r.path, "ko"));
   VI_HEAD = `<p class="sub">${d.total}개 파일${(d.collections||[]).length ? ` · 문서 묶음 ${d.collections.length}개` : ''} · ${d.since ? esc(d.since) + ' 이후' : '전체 기간'} · GitHub 호출 ${d.github_calls}회${d.cached ? ' (캐시)' : ''} · 트리 ${esc(d.tree_sha)}</p>`;
   VI_PAGE = 1;
   renderVaultIndex();
 }
 
-// ── 개인용 목록: 5개씩 페이지 (문서 묶음 → 개별 노트 순서로 한 줄에 섞어 센다) ──
+// 문서 묶음과 개별 파일을 같은 날짜·시각 기준으로 정렬한 뒤 페이지를 나눈다.
+function vaultItemSortKey(item){
+  const value = item.type === 'collection' ? item.c : item.r;
+  if (typeof value.sort_key === 'string') return value.sort_key;
+  // 이전 API 응답과도 호환: 파일명 끝 시분초가 없는 같은 날짜는 뒤에 둔다.
+  const match = (value.name || '').replace(/\.(md|html?)$/i, '').match(/[-_ ](\d{2})(\d{2})(\d{2})$/);
+  const time = match && +match[1]<24 && +match[2]<60 && +match[3]<60
+    ? match.slice(1).join(':') : '';
+  return value.date ? value.date + 'T' + time : '';
+}
+
+// ── 개인용 목록: 최신순으로 5개씩 페이지 ──
 const VI_PAGE_SIZE = 5;
 let VI_ITEMS = [], VI_HEAD = '', VI_PAGE = 1;
+const VI_SELECTION = new Map();
+let VI_IMPORT_BUSY = false;
 const kstToday = () => new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);
 // 열기·미리보기 공통 주소. html은 서버가 원본 그대로(sandbox CSP), md는 읽기용 html로 바꿔 준다.
 const vaultFileUrl = (path) => '/api/vault/file?path=' + encodeURIComponent(path);
@@ -790,31 +833,37 @@ function renderVaultIndex(){
   VI_PAGE = Math.min(Math.max(1, VI_PAGE), pages);
   const slice = VI_ITEMS.slice((VI_PAGE-1)*VI_PAGE_SIZE, VI_PAGE*VI_PAGE_SIZE);
 
-  const cols = slice.filter(x => x.type === 'collection').map(x => x.c);
-  const rows = slice.filter(x => x.type === 'row').map(x => x.r);
-
-  const collectionHtml = cols.length ? `
+  const collectionHtml = (cols) => cols.length ? `
     <div class="vault-collections">
       ${cols.map((c) => {
         const rep = c.representative;
         const importDate = rep.date || c.date || kstToday();
         const readme = /^readme\.(md|html?)$/i.test(rep.name);
         const repKind = /\.html?$/i.test(rep.name) ? 'html' : 'md';
+        const selection = VI_SELECTION.get(c.root) || {open:false,paths:new Set(),results:[]};
+        VI_SELECTION.set(c.root,selection);
+        const pending = c.files.filter(f=>!f.imported);
+        for(const f of c.files)if(f.imported)selection.paths.delete(f.path);
         return `<article class="vault-collection">
           <div class="vault-collection-head">
             <div>
               <strong>${esc(c.name)}</strong>
-              <small>${c.date ? esc(c.date) + ' · ' : ''}${c.count}개 문서 · ${Math.round((c.total_size||0)/1024)}KB</small>
+              <small>${c.date ? esc(c.date) + (c.time ? ' ' + esc(c.time.slice(0,5)) : '') + ' · ' : ''}${c.count}개 문서 · ${Math.round((c.total_size||0)/1024)}KB</small>
               <small>${esc(c.root)}</small>
             </div>
             <div class="vault-collection-actions">
               ${rep.imported
                 ? '<span class="pill2 ok">대표 가져옴</span>'
                 : `<button class="btn2 ghost" style="height:28px;font-size:11px" data-vault-import data-path="${esc(rep.path)}" data-date="${esc(importDate)}">대표 가져오기</button>`}
+              <button type="button" class="btn2 ghost" data-vault-select="${esc(c.root)}" aria-expanded="${selection.open}" ${VI_IMPORT_BUSY?'disabled':''}>문서 선택</button>
               ${vaultBtns(rep.path, c.name + ' · ' + rep.name, repKind, '대표 열기')}
             </div>
           </div>
           <p class="sub" style="margin:7px 0 0">대표: <b>${esc(rep.name)}</b>${readme ? ' · README 우선' : ' · README 없음 → 대표 문서 자동 선택'}</p>
+          ${selection.open ? `<section aria-label="가져올 문서 선택"><div class="vault-select-toolbar"><b>가져올 문서 선택</b><button type="button" class="btn2 ghost" data-vault-select-all="${esc(c.root)}" ${VI_IMPORT_BUSY?'disabled':''}>모두 선택 / 해제</button></div>
+            ${c.files.map(f=>`<div class="vault-doc"><label class="vault-select-check"><input type="checkbox" data-vault-check="${esc(c.root)}" data-path="${esc(f.path)}" ${selection.paths.has(f.path)?'checked':''} ${f.imported||VI_IMPORT_BUSY?'disabled':''}><span><strong>${esc(f.title)}</strong><small>${esc(f.name)} · ${f.imported?'가져옴':f.kind}</small></span></label><div class="vault-doc-actions">${vaultBtns(f.path,f.title,f.kind)}</div></div>`).join('')}
+            <div class="vault-select-footer"><span>선택 ${selection.paths.size}개 / 가져올 수 있는 문서 ${pending.length}개</span><button type="button" class="btn2" data-vault-import-selected="${esc(c.root)}" ${!selection.paths.size||VI_IMPORT_BUSY?'disabled':''}>선택한 ${selection.paths.size}개 가져오기</button></div>
+            <p class="vault-selection-result" role="status">${esc(selection.results.join('\n'))}</p></section>` : ''}
           <details>
             <summary>개별 문서 ${c.count}개 열기</summary>
             <div class="vault-doc-list">
@@ -828,7 +877,7 @@ function renderVaultIndex(){
       }).join('')}
     </div>` : '';
 
-  const rowsHtml = rows.length ? `
+  const rowsHtml = (rows) => rows.length ? `
     <div class="mrow head"><span>날짜</span><span>노트</span><span>크기</span><span>동작</span></div>
     ${rows.map((r,i)=>`
     <div class="mrow recbar" style="--rec:${BARS[i%BARS.length]}">
@@ -855,7 +904,17 @@ function renderVaultIndex(){
       <span class="sub">${(VI_PAGE-1)*VI_PAGE_SIZE+1}–${Math.min(total, VI_PAGE*VI_PAGE_SIZE)} / ${total}개 · ${VI_PAGE_SIZE}개씩</span>
     </nav>` : '';
 
-  $('#vlist').innerHTML = VI_HEAD + collectionHtml + rowsHtml + pager;
+  // 연속된 같은 종류만 묶어, 그리는 단계에서도 최신순을 유지한다.
+  const groups = [];
+  for (const item of slice) {
+    const last = groups[groups.length - 1];
+    if (last && last.type === item.type) last.items.push(item);
+    else groups.push({ type: item.type, items: [item] });
+  }
+  const content = groups.map(group => group.type === 'collection'
+    ? collectionHtml(group.items.map(item => item.c))
+    : rowsHtml(group.items.map(item => item.r))).join('');
+  $('#vlist').innerHTML = VI_HEAD + content + pager;
 }
 
 // ── 미리보기 모달: 서버가 준 html을 sandbox iframe에 담는다 (스크립트는 돌되 앱 쿠키·API에는 못 닿음) ──
@@ -892,7 +951,45 @@ function openVaultPreview(path, title, kind){
 }
 
 $('#vaultIndexForm').addEventListener('submit', e => { e.preventDefault(); loadVaultIndex(); });
+$('#vlist').addEventListener('change', e => {
+  const input=e.target.closest?.('[data-vault-check]');if(!input||VI_IMPORT_BUSY)return;
+  const selection=VI_SELECTION.get(input.dataset.vaultCheck);if(!selection)return;
+  input.checked?selection.paths.add(input.dataset.path):selection.paths.delete(input.dataset.path);
+  const path=input.dataset.path;renderVaultIndex();
+  [...document.querySelectorAll('[data-vault-check]')].find(x=>x.dataset.path===path)?.focus();
+});
+async function importSelectedVault(root){
+  if(VI_IMPORT_BUSY)return;
+  const collection=VI_ITEMS.find(x=>x.type==='collection'&&x.c.root===root)?.c;
+  const selection=VI_SELECTION.get(root);if(!collection||!selection?.paths.size)return;
+  const files=collection.files.filter(f=>selection.paths.has(f.path)&&!f.imported);
+  const mode=document.documentElement.dataset.workMode;
+  VI_IMPORT_BUSY=true;selection.results=[];renderVaultIndex();
+  try{
+    for(let i=0;i<files.length;i++){
+      if(mode!==document.documentElement.dataset.workMode){selection.results.push('사용 공간이 바뀌어 나머지 가져오기를 중지했습니다.');break;}
+      const f=files[i];
+      selection.results.push(`${i+1}/${files.length} · ${f.name} · 가져오는 중`);renderVaultIndex();
+      try{
+        const res=await fetch('/api/vault/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:f.path,date:f.date||collection.date||kstToday()})});
+        const r=await res.json();if(!res.ok)throw new Error(r.error||'가져오기 실패');
+        f.imported=true;if(f.path===collection.representative.path)collection.representative.imported=true;
+        selection.paths.delete(f.path);selection.results[selection.results.length-1]=`${f.name} · ${r.already?'이미 가져온 문서':'가져오기 완료'}`;
+      }catch(err){selection.results[selection.results.length-1]=`${f.name} · 실패: ${err.message}`;}
+      renderVaultIndex();
+    }
+    if(selection.paths.size)selection.results.push('실패한 문서의 선택을 유지했습니다. 선택한 문서 가져오기를 다시 눌러 재시도하세요.');
+    await loadMeetings();
+  }finally{VI_IMPORT_BUSY=false;renderVaultIndex();}
+}
 $('#vlist').addEventListener('click', e => {
+  const choose=e.target.closest?.('[data-vault-select]');
+  if(choose){if(VI_IMPORT_BUSY)return;const s=VI_SELECTION.get(choose.dataset.vaultSelect);s.open=!s.open;renderVaultIndex();return;}
+  const all=e.target.closest?.('[data-vault-select-all]');
+  if(all){if(VI_IMPORT_BUSY)return;const root=all.dataset.vaultSelectAll,s=VI_SELECTION.get(root),c=VI_ITEMS.find(x=>x.type==='collection'&&x.c.root===root)?.c;if(!c)return;const files=c.files.filter(f=>!f.imported);const checked=files.every(f=>s.paths.has(f.path));s.paths=checked?new Set():new Set(files.map(f=>f.path));renderVaultIndex();return;}
+  const selected=e.target.closest?.('[data-vault-import-selected]');
+  if(selected){importSelectedVault(selected.dataset.vaultImportSelected);return;}
+
   const pg = e.target.closest?.('[data-vi-page]');
   if (pg) { VI_PAGE = Number(pg.dataset.viPage) || 1; renderVaultIndex(); $('#vaultCard').scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
   const pv = e.target.closest?.('[data-vault-preview]');
@@ -901,7 +998,7 @@ $('#vlist').addEventListener('click', e => {
   if (!btn) return;
   importVault(btn, btn.dataset.path || '', btn.dataset.date || kstToday());
 });
-document.addEventListener('wc:mode', () => { if ($('#tab-list').style.display !== 'none') loadVault(); });
+document.addEventListener('wc:mode', () => { VI_SELECTION.clear(); if ($('#tab-list').style.display !== 'none') loadVault(); });
 async function makeIssue(id){
   const r = await api(`/api/meetings/${id}/issue`,{method:'POST'});
   if (r.url) window.open(r.url,'_blank');
@@ -941,7 +1038,7 @@ function applyPersonalCopy(){
   }
 }
 applyPersonalCopy();
-document.addEventListener('wc:mode', () => {applyPersonalCopy();if(DETAIL_ID!==null)closeMeeting();loadMeetings();});
+document.addEventListener('wc:mode', () => {applyPersonalCopy();if(DETAIL_ID!==null)closeMeeting();MEETING_PAGE=1;MEETING_ROWS=[];loadMeetings();});
 
 (async function(){
   const me = await api('/api/me'); ME = me.email; $('#me').textContent = me.email;

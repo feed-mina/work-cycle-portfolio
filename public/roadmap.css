@@ -1,0 +1,73 @@
+.roadmap-wrap{max-width:1180px;font-size:16px}.roadmap-hero{background:var(--card);border-left:5px solid var(--accent)}.roadmap-hero h2{font-size:30px}.roadmap-eyebrow{color:var(--accent);font-weight:700;font-size:14px}.roadmap-tags,.roadmap-toolbar,.roadmap-links{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.roadmap-tags span{border:1px solid var(--line);background:var(--accent-soft);padding:5px 10px;border-radius:8px;font-size:14px}.roadmap-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}.roadmap-layout>.card{margin-top:0;min-width:0}.roadmap-detail{scroll-margin-top:20px}.roadmap-detail h2{font-size:23px}.roadmap-detail form{display:grid;gap:12px;margin:18px 0}.roadmap-detail label{display:grid;gap:5px;color:var(--ink2);font-size:15px}.roadmap-detail input,.roadmap-detail textarea,.roadmap-detail select,.roadmap-toolbar select{width:100%;min-width:0;max-width:100%;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit}.roadmap-detail textarea{resize:vertical}.roadmap-fields{display:grid!important;grid-template-columns:1fr 1fr;align-items:end;gap:12px}.roadmap-detail .btn2{font-size:15px;white-space:normal;text-align:center}.roadmap-connection{border-top:1px solid var(--line);margin-top:24px;padding-top:12px}.roadmap-connection h3{font-size:18px}.roadmap-hint{padding:12px;border-radius:8px;background:var(--warn-soft);color:var(--ink2)}.roadmap-node{display:block;width:100%;text-align:left;padding:16px;border:1px solid var(--line);border-radius:12px;color:var(--ink);background:var(--card);font:inherit;cursor:pointer;margin:9px 0}.roadmap-node b,.roadmap-node span{display:block;overflow-wrap:anywhere}.roadmap-node span{font-size:14px;color:var(--ink2);margin-top:5px}.roadmap-node[aria-pressed=true]{border:2px solid var(--accent);background:var(--accent-soft)}.roadmap-map h3{font-size:17px;margin-top:22px;color:var(--ink2)}.roadmap-map h3:not(:first-child):before{content:'↓ ';color:var(--accent)}#roadmapStatus{padding:12px 16px;border-radius:8px;background:var(--accent-soft);overflow-wrap:anywhere}.roadmap-record{padding:12px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere;white-space:pre-wrap}.roadmap-record small{display:block;color:var(--ink3)}.roadmap-connection select{font-size:14px}button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.roadmap-card-link{display:block;padding:16px;border:1px solid var(--line);border-radius:10px;margin:14px 0;background:var(--accent-soft);text-decoration:none;color:var(--ink)}@media(max-width:760px){.roadmap-layout{grid-template-columns:1fr}.roadmap-map{order:-1}.roadmap-fields{grid-template-columns:1fr}.roadmap-wrap{padding:16px 12px}.roadmap-detail{padding:20px 16px}.roadmap-map{padding:18px 16px}#roadmapNodes{display:grid;grid-template-columns:1fr 1fr;gap:8px}#roadmapNodes h3{grid-column:1/-1}#roadmapNodes .roadmap-node{margin:0;padding:12px}.roadmap-hero h2{font-size:26px}}[hidden]{display:none!important}
+
+
+/* Integrated project selector and combined easy/fix guide. */
+.roadmap-projects{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.roadmap-projects button{min-height:46px;padding:10px 18px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink2);font:inherit;font-weight:700;cursor:pointer}.roadmap-projects button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}.roadmap-project-summary{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}.roadmap-project-summary h3{margin:0 0 7px;font-size:21px}.roadmap-project-summary .sub{margin-bottom:8px}.roadmap-guide-tabs{display:flex;gap:7px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:12px 0;margin:12px 0}.roadmap-guide-tabs button{font:inherit;font-size:15px;min-height:42px;padding:9px 12px;color:var(--ink2);border:1px solid transparent;background:var(--card);border-radius:7px;cursor:pointer}.roadmap-guide-tabs button[aria-selected=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700}#easyPanel,#fixPanel{font-size:16px;line-height:1.8;overflow-wrap:anywhere}#easyPanel h3,#fixPanel h3{font-size:17px;margin:20px 0 7px}#fixPanel a{overflow-wrap:anywhere}#roadmapGuideDialog{width:min(960px,calc(100% - 28px));max-height:88vh;padding:0;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);overflow:auto}#roadmapGuideDialog::backdrop{background:rgba(20,30,30,.5)}.roadmap-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:18px 22px;position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line)}.roadmap-dialog-head h2{font-size:22px}.roadmap-dialog-body{padding:20px 24px}.roadmap-guide-section{padding:15px 0 22px;border-bottom:1px solid var(--line);font-size:16px;line-height:1.8}.roadmap-guide-section>p:first-child{color:var(--accent);font-weight:700}.roadmap-guide-section h3{font-size:20px}.roadmap-guide-section h4{font-size:17px}.roadmap-guide-section a{overflow-wrap:anywhere}.roadmap-guide-section details{background:var(--accent-soft);border-radius:8px;padding:14px;margin-top:14px}.roadmap-guide-section summary{cursor:pointer;font-weight:700}@media(max-width:600px){.roadmap-projects{display:grid;grid-template-columns:1fr 1fr;gap:7px}.roadmap-projects button{padding:10px 6px;font-size:14px}.roadmap-dialog-head{padding:14px}.roadmap-dialog-head h2{font-size:19px}.roadmap-dialog-body{padding:16px}.roadmap-project-summary h3{font-size:19px}}
+
+.roadmap-tracks{border-top:1px solid var(--line);padding-top:16px}.roadmap-tracks button{font-size:15px;min-width:0}@media(max-width:600px){.roadmap-tracks{grid-template-columns:1fr}.roadmap-tracks button{text-align:left}}
+
+.cad-master-plan>h2{font-size:25px}.cad-master-weeks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}.cad-master-week{min-width:0;padding:16px;border:1px solid var(--line);border-radius:10px;background:var(--card)}.cad-master-week button{width:100%;text-align:left;font:inherit;font-weight:700;color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:11px;cursor:pointer;white-space:normal}.cad-master-week p{margin:9px 0}.cad-master-week small{display:block;line-height:1.7;overflow-wrap:anywhere}.cad-master-plan details{border-top:1px solid var(--line);padding-top:17px;margin-top:17px}.cad-master-plan summary{cursor:pointer;font-weight:700}.cad-master-layer{padding:14px 0;border-bottom:1px solid var(--line)}.cad-master-layer h3{margin:5px 0;font-size:18px}.cad-master-layer p{margin:5px 0;overflow-wrap:anywhere}@media(max-width:600px){.cad-master-weeks{grid-template-columns:1fr}.cad-master-plan{padding:18px 14px}.cad-master-plan>h2{font-size:22px}}
+.roadmap-guide-section{overflow-wrap:anywhere}.roadmap-dialog-head h2{min-width:0;overflow-wrap:anywhere}.roadmap-dialog-head button{flex-shrink:0}.roadmap-dialog-body{min-width:0}
+
+.roadmap-references{min-width:0;border-top:2px solid var(--line);margin-top:24px;padding-top:12px;overflow-wrap:anywhere}
+.roadmap-references>p{line-height:1.8}.roadmap-reference-list{display:grid;gap:12px;margin:14px 0}
+.roadmap-reference-card{min-width:0;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.roadmap-reference-card h4{font-size:16px;margin:0 0 8px}.roadmap-reference-card small,.roadmap-references>small{display:block;color:var(--ink2);line-height:1.7}
+.roadmap-reference-card p{margin:8px 0}.roadmap-references a{overflow-wrap:anywhere}.roadmap-reference-card a:focus-visible{outline-offset:2px}
+
+/* Red-boxed supporting content stays in the DOM for all roadmap projects. */
+.roadmap-wrap .roadmap-secondary,
+#roadmapGuideDialog .roadmap-secondary,
+#roadmapCount,
+#itemDependency,
+#itemDeadline,
+#itemSource,
+#roadmapStatus[data-kind="success"]{display:none!important}
+
+
+/* Compact navigation chips for guide, reference, and source links. */
+.roadmap-wrap .roadmap-link-chip,#roadmapGuideDialog .roadmap-link-chip{
+ display:inline-flex;align-items:center;gap:7px;vertical-align:middle;
+ min-width:0;max-width:100%;min-height:34px;box-sizing:border-box;
+ padding:6px 11px;border:1px solid var(--line);border-radius:999px;
+ background:var(--card);color:var(--ink2);font-size:13px;font-weight:600;
+ line-height:1.45;text-decoration:none;overflow:hidden;
+ transition:background .15s ease,border-color .15s ease,color .15s ease;
+}
+.roadmap-link-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.roadmap-link-chip::before{
+ content:'';width:14px;height:14px;flex:none;background:currentColor;
+ -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 15 6-6m-6 3-1.5 1.5a3.2 3.2 0 0 0 4.5 4.5l3-3m0-3 1.5-1.5A3.2 3.2 0 0 0 12 6l-3 3'/%3E%3C/svg%3E") center/contain no-repeat;
+ mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 15 6-6m-6 3-1.5 1.5a3.2 3.2 0 0 0 4.5 4.5l3-3m0-3 1.5-1.5A3.2 3.2 0 0 0 12 6l-3 3'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+.roadmap-link-chip[data-external=true]::after{content:'↗';font-size:13px;flex:none;opacity:.7}
+.roadmap-wrap .roadmap-link-chip:hover,#roadmapGuideDialog .roadmap-link-chip:hover{
+ color:var(--accent);background:var(--accent-soft);border-color:var(--accent);
+}
+.roadmap-link-chip:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.roadmap-reference-card h4 .roadmap-link-chip{font-size:14px;font-weight:700}
+.roadmap-reference-card .roadmap-reference-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.roadmap-detail ul:has(>li>.roadmap-link-chip){padding-left:0;list-style:none}
+.roadmap-detail li:has(>.roadmap-link-chip){min-width:0;margin:12px 0}
+.roadmap-detail li:has(>.roadmap-link-chip)>p{margin:6px 0;color:var(--ink2);font-size:14px}
+@media(prefers-reduced-motion:reduce){.roadmap-link-chip{transition:none!important}}
+
+
+/* Compact progress and evidence. Do not revive the removed numbered result panel. */
+.roadmap-progress-count{margin:0;font-size:14px;font-weight:600;color:var(--ink2)}
+.roadmap-badge{display:inline-flex!important;align-items:center;gap:5px;width:fit-content;max-width:100%;padding:4px 9px;border:1px solid var(--line);border-radius:999px;font-size:13px!important;font-weight:700;background:var(--card);color:var(--ink)!important;white-space:normal}
+.roadmap-badge[data-state=done]{background:#e4f5eb;color:#16633a!important;border-color:#86bd9d}
+.roadmap-badge[data-state=testing]{background:#fff2d5;color:#775009!important;border-color:#dbba70}
+.roadmap-badge[data-state=doing]{background:var(--accent-soft);color:var(--accent)!important}
+.roadmap-badge[data-state=blocked],.roadmap-badge[data-state=review]{border-style:dashed}
+.roadmap-node[data-state=done]{border-left:5px solid #288653}
+.roadmap-progress-line{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:14px}
+.roadmap-evidence,.roadmap-source-progress{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:12px 0;overflow-wrap:anywhere}
+.roadmap-evidence summary,.roadmap-source-progress summary{cursor:pointer;font-weight:600;min-height:24px}
+.roadmap-evidence p,.roadmap-source-progress p{font-size:14px;line-height:1.65}
+.roadmap-evidence form{margin:12px 0}.roadmap-evidence-preview{font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.roadmap-evidence [role=status]{margin:8px 0 0}.roadmap-evidence button:disabled{opacity:.55;cursor:not-allowed}
+.roadmap-evidence .roadmap-record{margin:6px 0;padding:8px 0}.roadmap-evidence .roadmap-record p{margin:4px 0}
+.roadmap-source-progress small{display:block;color:var(--ink2)}
+
+.roadmap-check-list{padding-left:24px}.roadmap-check-list li{padding:6px 0}.roadmap-check-list label{display:flex;align-items:flex-start;gap:12px;cursor:pointer;line-height:1.8}.roadmap-check-list input[type=checkbox]{flex:0 0 21px;width:21px;height:21px;min-height:21px;margin-top:4px;accent-color:var(--accent,#345acb)}.roadmap-check-status{font-size:13px;color:#52617b}.roadmap-check-status[data-kind=error]{color:#a51d2d}

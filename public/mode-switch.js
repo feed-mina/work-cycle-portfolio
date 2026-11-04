@@ -9,7 +9,7 @@
   const KEY = 'wc.mode';
   const html = document.documentElement;
   const path = (location.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/');
-  const PERSONAL_PAGES = { '/personal': '/', '/personal-dashboard': '/dashboard' };
+  const PERSONAL_PAGES = { '/personal': '/', '/personal-dashboard': '/dashboard', '/roadmap': '/' };
   const COMPANY_PAGES = { '/': '/personal', '/dashboard': '/personal-dashboard' };
   const pageMode = path in PERSONAL_PAGES ? 'personal' : path in COMPANY_PAGES ? 'company' : null;
 

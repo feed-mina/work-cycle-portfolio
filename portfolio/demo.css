@@ -15,3 +15,5 @@ html.demo .desktop-banner-download{display:none}
 /* 외부 계정 연결 버튼은 보이되 눌러도 안내만 */
 html.demo a.demo-off{opacity:.55;cursor:not-allowed}
 @media(max-width:600px){.demo-bar{font-size:11.5px;padding:8px 10px}}
+
+.demo-entry{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}.demo-landing{max-width:900px;margin:0 auto;padding:16px}.demo-landing pre{white-space:pre-wrap;overflow-wrap:anywhere}.demo-tour{padding:10px 14px;margin:0 0 12px;border:1px solid var(--line);border-radius:8px;background:var(--card)}.demo-roadmap #roadmapSetup{display:none!important}

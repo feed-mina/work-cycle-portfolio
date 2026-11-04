@@ -9,7 +9,7 @@
  *
  * 실행: node tests/portfolio-browser.test.cjs   (playwright + Chromium 필요, PORTFOLIO.md 참고)
  */
-const { chromium } = require("playwright");
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const { execFileSync } = require("node:child_process");
 const http = require("node:http"), fs = require("node:fs"), path = require("node:path");
 
@@ -40,9 +40,10 @@ const ALLOWED_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
   const browser = await chromium.launch({ ...(process.env.DEMO_BROWSER ? { executablePath: process.env.DEMO_BROWSER } : {}), args: ["--no-sandbox"] });
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: "ko-KR" });
   const page = await context.newPage();
+  page.setDefaultTimeout(8000);
   const errors = [], dialogs = [], external = [], failed = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  page.on("console", (m) => { if (m.type() === "error") errors.push("console: " + m.text()); });
+  page.on("console", (m) => { if (m.type() === "error") errors.push("console: " + m.location().url + " " + m.text()); });
   // 체험 초기화 확인창만 승인한다. 그 밖의 alert/confirm 은 전부 실패로 센다(운영 화면이 '요청 실패'를 alert 로 알리므로).
   page.on("dialog", (d) => { dialogs.push(d.type() + ": " + d.message()); (d.message().startsWith("체험 데이터") ? d.accept() : d.dismiss()).catch(() => {}); });
   page.on("request", (r) => { const u = new URL(r.url()); if (u.origin !== base && !ALLOWED_HOSTS.includes(u.hostname)) external.push(r.url()); });
@@ -52,7 +53,7 @@ const ALLOWED_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
 
   // 루트 → /personal
   await page.goto(base + "/", { waitUntil: "load" });
-  await page.waitForURL(/\/personal$/);
+  await page.getByRole("link", { name: "자유롭게 둘러보기" }).click();
   await page.evaluate(() => localStorage.setItem("production-record", "keep"));
 
   for (const width of [1280, 420]) {
@@ -144,22 +145,67 @@ const ALLOWED_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
       await page.waitForFunction(() => (document.querySelector("#lvSaved")?.textContent || "").startsWith("저장됨"), null, { timeout: 5000 });
     }
 
-    // ── 범위 밖 화면 안내 ──
     await open("/report");
-    assert((await page.locator(".card.sig h2").textContent()).includes("제공하지 않는 화면"), "주간보고 안내 " + tag);
-    await noOverflow("report-notice " + tag);
+    await page.waitForSelector("#rows tr", { state: "attached" });
+    assert((await page.locator("#rows tr").count()) === 7, "주간보고 7일 " + tag);
+    await noOverflow("report " + tag);
+    if (width === 1280) {
+      await page.locator("#rows td.rp-c").first().click();
+      await page.locator("#rows textarea").fill("예시 보고서 편집");
+      await page.locator('#rows [data-a="ok"]').click();
+      await page.waitForFunction(() => document.querySelector("#rows").textContent.includes("예시 보고서 편집"));
+    }
+    await open("/personal-dashboard");
+    await page.waitForSelector("#personalFilters");
+    await noOverflow("personal-dashboard " + tag);
+    await open("/dashboard");
+    await page.waitForFunction(() => Number(document.getElementById("tTotal").textContent) > 0);
+    await noOverflow("dashboard " + tag);
+    await open("/roadmap");
+    await page.waitForSelector(".roadmap-check-list input:enabled");
+    if (width === 1280) {
+      await page.locator(".roadmap-check-list input").first().click();
+      await page.waitForFunction(() => document.querySelector(".roadmap-check-list input").checked);
+      await page.reload();
+      await page.waitForFunction(() => document.querySelector(".roadmap-check-list input")?.checked);
+    }
+    await noOverflow("roadmap " + tag);
+    await open("/meetings?tab=list&tour=1");
+    await page.waitForSelector(".demo-tour");
+    await page.waitForFunction(() => document.querySelectorAll("#mlist article").length === 5 && document.querySelectorAll(".share-manager-item").length === 5);
+    await page.locator('#meetingPager button').last().click();
+    await page.waitForFunction(() => document.querySelector("#meetingPager").textContent.includes("2 /"));
+    await page.locator('#shareManagerPager button').last().click();
+    await page.waitForFunction(() => document.querySelector("#shareManagerPager").textContent.includes("2 /"));
+    if (width === 1280) {
+      await page.locator("#mlist article button").first().click();
+      await page.click("#meetingShareButton");
+      await page.locator("#meetingSharePanel [data-confirm]").check();
+      await page.click("#meetingSharePanel [data-create]");
+      await page.waitForFunction(() => document.querySelector("#meetingSharePanel [data-url]")?.value.includes("/share-demo?"));
+      const previewUrl = await page.locator("#meetingSharePanel [data-url]").inputValue();
+      const preview = await context.newPage();
+      await preview.goto(previewUrl);
+      await preview.waitForFunction(() => document.getElementById("demoShareBody").textContent.includes("## 요약"));
+      await page.click("#meetingSharePanel [data-revoke]");
+      await page.waitForFunction(() => document.querySelector("#meetingSharePanel [data-state]").textContent.includes("중지"));
+      await preview.reload();
+      assert((await preview.locator("#demoShareTitle").textContent()).includes("볼 수 없는"), "공유 중지 후 예시 링크 차단");
+      await preview.close();
+    }
+    await noOverflow("meeting/share pages " + tag);
   }
 
   // ── 체험 초기화: 데모 키만 지운다 ──
   await open("/personal");
   const before = await page.evaluate(() => Object.keys(localStorage).length);
   await page.click(".demo-bar-reset");
-  await page.waitForURL(/\/personal$/);
+  await page.waitForURL(url => url.pathname === "/");
   await page.waitForSelector(".demo-bar");
   const storage = await page.evaluate(() => ({ ...localStorage }));
   assert(storage["production-record"] === "keep", "초기화가 관계없는 키를 지움");
   assert(before > 1, "초기화 전 저장값 있음");
-  const demoState = JSON.parse(storage["portfolio-demo:work-cycle:v2"] || "null");
+  const demoState = JSON.parse(storage["portfolio-demo:work-cycle:v3"] || "null");
   assert(demoState && !JSON.stringify(demoState).includes("데모 테스트 카드"), "초기화 뒤 새 예시");
 
   const realDialogs = dialogs.filter((d) => !d.startsWith("confirm: 체험 데이터"));
@@ -167,6 +213,6 @@ const ALLOWED_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
   assert(!realDialogs.length, "alert/confirm 발생: " + realDialogs.join(" | "));
   assert(!external.length, "외부 요청: " + [...new Set(external)].join(", "));
   assert(!failed.length, "정적 파일 404: " + [...new Set(failed)].join(", "));
-  console.log("PASS — /personal /schedule /kanban /meetings 1280px·420px · 조작 유지 · 오류 0 · 외부 요청 0 · 초기화 격리");
+  console.log("PASS: eight screens at 1280/420; pagination, share preview and revoke, roadmap checks, report edit, persistence and reset; no runtime errors or external requests except fonts");
   await context.close(); await browser.close(); await new Promise((r) => server.close(r));
 })().catch((e) => { console.error(e); server.close(); process.exit(1); });

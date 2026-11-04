@@ -11,7 +11,7 @@
  */
 (() => {
   "use strict";
-  const KEY = "portfolio-demo:work-cycle:v2";
+  const KEY = "portfolio-demo:work-cycle:v3";
   const EMAIL = "guest@example.com";
   const NAME = EMAIL.split("@")[0];
   const UI_VERSION = "personal-v1";
@@ -484,7 +484,13 @@
 
   // 회의록
   const meetingRow = (m) => ({ ...m, read_count: 0, read_by_me: S.reads.includes(m.id) ? 1 : 0 });
-  on("GET", "/api/meetings", () => json({ rows: [...S.meetings].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id).map(meetingRow), team_size: 1, scope: "personal" }));
+  on("GET", "/api/meetings", (q) => {
+    const term = clean(q.get("q"), 200).toLowerCase();
+    const rows = S.meetings.map(meetingRow)
+      .filter(m => (q.get("unread") !== "1" || !m.read_by_me) && (m.title + " " + m.date).toLowerCase().includes(term))
+      .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+    return json({ ...paginate(rows, q), team_size: 1, scope: "personal" });
+  });
   on("POST", "/api/meetings", (q, b) => {
     if (!clean(b.title, 200) || !validDate(b.date)) return err("date와 title은 필수");
     S.meetings.push({ id: nextId(), date: b.date, title: clean(b.title, 200), body_mode: "link_only", body_md: null, link: clean(b.link, 500) || null, created_by: EMAIL, schedule_id: null, scope: "personal", gh_issue_url: null, created_at: nowUtc() });
@@ -575,6 +581,231 @@
   on("GET", "/api/reminders/preview", () => json({ when: "evening", text: reminderText(1740) }));
   on("POST", "/api/reminders/test", (q, b) => json({ when: b.when === "morning" ? "morning" : "evening", sent: false, detail: "공개 데모에서는 카카오톡으로 보내지 않습니다", text: reminderText(b.when === "morning" ? 825 : 1740) }));
 
+
+  // Public sample records. All changes are saved only in the visitor's browser.
+  function paginate(rows, query) {
+    const pageSize = 5;
+    const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+    const requested = Number(query.get("page"));
+    const page = Number.isSafeInteger(requested) ? Math.min(pages, Math.max(1, requested)) : 1;
+    return { rows: rows.slice((page - 1) * pageSize, page * pageSize), total: rows.length, page, pages, page_size: pageSize };
+  }
+
+  const roadmapExamples = [
+    ["km-demo-route", "KMovement", "여행 코스 검증", "추천 코스의 장소 3곳과 이동 시간을 확인하기"],
+    ["km-demo-video", "KMovement", "사진으로 영상 만들기", "예시 사진 3장으로 10초 영상의 순서 정하기"],
+    ["iot-demo-sensor", "생활 IoT", "문 열림 센서 점검", "문을 세 번 열고 닫아 상태 기록 비교하기"],
+    ["iot-cad-05", "생활 IoT", "센서 거치대 시연", "예시 센서 치수와 거치대 간격 비교하기"],
+    ["ai-f40", "AI 콘텐츠", "콘텐츠 초안 검수", "공개용 초안에서 날짜와 출처를 확인하기"],
+  ];
+
+  window.ROADMAP_PERSONAL_ACTIONS = Object.fromEntries(roadmapExamples.map(([id, , , action]) => [
+    id, [action, "결과 기록에서 확인 방법과 결과 적기", "결과를 연결하고 완료 기준과 비교하기"],
+  ]));
+
+  window.ROADMAP_GUIDES = Object.fromEntries([
+    ["kmovement", "KMovement"], ["iot", "생활 IoT"], ["ai-content", "AI 콘텐츠"],
+  ].map(([key, project]) => [key, roadmapExamples.filter(row => row[1] === project).map(([id, , title, action]) => ({
+    id, period: "체험 일정", easy: title + "의 진행 과정을 예시로 살펴봅니다.",
+    known: "체험에 사용할 예시 자료가 준비돼 있습니다.", actions: [action, "확인 과정과 결과를 기록하기"],
+    ask: "이 예시의 완료 기준과 확인할 항목을 정리해 주세요.",
+    fix: "예시 결과를 연결한 뒤 완료 기준을 비교합니다.", files: [],
+    tests: ["확인 방법과 결과가 모두 기록되었는지 확인"], fail: "확인하지 못한 항목은 진행 중으로 남겨 주세요.",
+  }))]));
+
+  function setupExpandedDemo() {
+    if (S.expandedDemo) return;
+    const topics = ["여행 코스 검토", "센서 실험 회고", "콘텐츠 초안 검수", "시연 전 점검", "기능 우선순위", "주간 진행 기록", "화면 접근성 확인", "오류 대응 연습", "보고서 형식 비교", "다음 주 계획"];
+    for (const [index, title] of topics.entries()) {
+      const date = shift(today(), -index);
+      S.meetings.push({ id: nextId(), title: "예시 · " + title, date, body_mode: "full_md", body_md: "# " + title + "\n\n## 요약\n시연용 기록을 검토하고 완료 기준과 다음 회의에서 확인할 항목을 정했습니다.\n\n## 할 일 (Action Items)\n- [ ] 예시 결과를 확인하고 칸반에 기록하기", created_by: EMAIL, scope: "personal", created_at: date + " 09:00:00" });
+    }
+    const time = Date.now();
+    S.shares = S.meetings.slice(0, 8).map((meeting, index) => ({
+      meeting_id: meeting.id, title: meeting.title, meeting_date: meeting.date, body: meeting.body_md,
+      updated_at: time - index * 60000, expires_at: time + (index === 1 ? -1 : 1) * 86400000,
+      revoked_at: index === 2 ? time : null
+    }));
+    S.roadmap = roadmapExamples.map(([id, project, title, action]) => ({
+      id, project, title, phase: "공개 체험", state: "todo", criterion: action + " · 결과를 기록으로 남기기",
+      next_action: action, target_date: today(), prerequisite: null, results: [], checked: {},
+    }));
+    S.reportSettings = { author: "체험 사용자", dept: "예시 프로젝트", role_name: "개발", prj_code: "DEMO", project: "공개 체험", goal: "계획부터 보고까지 한 번 체험하기" };
+    S.reportEdits = {};
+    S.expandedDemo = true;
+    save();
+  }
+
+  function shareStatus(share) {
+    if (share.revoked_at) return "revoked";
+    return share.expires_at && share.expires_at <= Date.now() ? "expired" : "active";
+  }
+
+  on("GET", "/api/meeting-shares", (q) => {
+    const term = clean(q.get("q"), 200).toLowerCase();
+    const status = q.get("status") || "all";
+    const shares = S.shares.map(({ body, ...row }) => ({ ...row, status: shareStatus(row) }));
+    const counts = { total: shares.length, active: 0, expired: 0, revoked: 0 };
+    for (const row of shares) counts[row.status]++;
+    const direction = q.get("sort") === "old" ? 1 : -1;
+    const rows = shares.filter(row => (status === "all" || row.status === status) && row.title.toLowerCase().includes(term))
+      .sort((a, b) => direction * (a.updated_at - b.updated_at || a.meeting_id - b.meeting_id));
+    return json({ ...paginate(rows, q), counts, scope: "personal" });
+  });
+  const demoMeeting = id => S.meetings.find(meeting => String(meeting.id) === id);
+  on("GET", "/api/meetings/:id/share-source", (q, b, p) => {
+    const meeting = demoMeeting(p.id);
+    return meeting ? json({ meeting: meetingRow(meeting), scope: "personal" }) : err("회의록을 찾을 수 없습니다", 404);
+  });
+  on("GET", "/api/meetings/:id/share", (q, b, p) => {
+    const meeting = demoMeeting(p.id);
+    if (!meeting?.body_md) return json({ available: false, reason: "앱에 저장된 예시 원문이 없습니다." });
+    const share = S.shares.find(row => row.meeting_id === meeting.id);
+    return json({ available: true, active: !!share && shareStatus(share) === "active", expires_at: share?.expires_at, updated_at: share?.updated_at });
+  });
+  on("POST", "/api/meetings/:id/share", (q, b, p) => {
+    const meeting = demoMeeting(p.id);
+    if (!meeting?.body_md) return err("예시 원문이 없습니다", 404);
+    if (!b.confirmed || ![0, 7, 30].includes(b.days)) return err("원문 확인과 만료 기간을 선택해 주세요");
+    const updated_at = Date.now();
+    const expires_at = b.days ? updated_at + b.days * 86400000 : null;
+    S.shares = S.shares.filter(row => row.meeting_id !== meeting.id);
+    S.shares.push({ meeting_id: meeting.id, title: meeting.title, meeting_date: meeting.date, body: meeting.body_md, updated_at, expires_at, revoked_at: null });
+    save();
+    const url = new URL("/share-demo?id=" + meeting.id + "&version=" + updated_at, location.origin).href;
+    return json({ ok: true, url, updated_at, expires_at });
+  });
+  on("DELETE", "/api/meetings/:id/share", (q, b, p) => {
+    const row = S.shares.find(share => String(share.meeting_id) === p.id);
+    if (row) row.revoked_at = Date.now();
+    save();
+    return json({ ok: true });
+  });
+
+  function roadmapView(item) {
+    const results = S.results.filter(row => item.results.includes(row.id) && !row.deleted_at);
+    const has_verified_evidence = results.some(row => row.status === "확인됨" && row.method && row.result);
+    return {
+      ...item, results, has_verified_evidence, prerequisite_ready: true,
+      state: item.state === "done" && !has_verified_evidence ? "doing" : item.state,
+      evidence_missing: item.state === "done" && !has_verified_evidence,
+      schedule_date: S.schedules.find(row => row.id === item.schedule_id)?.date,
+      schedule_title: S.schedules.find(row => row.id === item.schedule_id)?.title,
+    };
+  }
+  function demoActions(item) {
+    return [item.next_action, ...window.ROADMAP_PERSONAL_ACTIONS[item.id].slice(1)]
+      .map((text, index) => ({ id: "a" + (index + 1), text, checked: !!item.checked["a" + (index + 1)], revision: "demo-1" }));
+  }
+  on("GET", "/api/roadmap", () => json({ installed: true, today: today(), items: S.roadmap.map(roadmapView) }));
+  on("POST", "/api/roadmap/initialize", () => json({ ok: true }));
+  on("GET", "/api/roadmap/actions", () => json({ installed: true, items: S.roadmap.map(item => ({ id: item.id, available: true, actions: demoActions(item) })) }));
+  on("PATCH", "/api/roadmap/items/:id/actions/:action", (q, b, p) => {
+    const item = S.roadmap.find(row => row.id === p.id);
+    if (!item || !demoActions(item).some(action => action.id === p.action && action.revision === b.revision) || typeof b.checked !== "boolean") return err("행동 항목을 다시 선택해 주세요");
+    item.checked[p.action] = b.checked;
+    save();
+    return json({ checked: b.checked });
+  });
+  on("PATCH", "/api/roadmap/items/:id", (q, b, p) => {
+    const item = S.roadmap.find(row => row.id === p.id);
+    if (!item) return err("예시 항목을 찾을 수 없습니다", 404);
+    if (!["todo", "doing", "blocked", "done"].includes(b.state) || !clean(b.title) || !clean(b.criterion) || !clean(b.next_action)) return err("제목과 완료 기준, 다음 행동을 입력해 주세요");
+    if (b.state === "done" && !roadmapView(item).has_verified_evidence) return err("확인된 결과 기록을 먼저 연결해 주세요", 409);
+    for (const key of ["title", "state", "criterion", "next_action", "target_date"]) item[key] = clean(b[key]);
+    save();
+    return json({ ok: true });
+  });
+  on("GET", "/api/roadmap/items/:id/connections", (q) => json({
+    schedules: S.schedules, logs: [], results: S.results.filter(row => !row.deleted_at && (!q.get("result_date") || row.cycle_date === q.get("result_date")))
+  }));
+  on("POST", "/api/roadmap/items/:id/schedule", (q, b, p) => {
+    const item = S.roadmap.find(row => row.id === p.id);
+    if (!item) return err("예시 항목을 찾을 수 없습니다", 404);
+    let row = S.schedules.find(schedule => schedule.id === (b.schedule_id || item.schedule_id));
+    if (!row && validDate(b.date)) {
+      row = { id: nextId(), date: b.date, title: item.title, block_type: "업무", status: "미완료", scope: "personal", created_by: EMAIL, user_email: EMAIL, body: item.next_action };
+      S.schedules.push(row);
+    }
+    if (!row) return err("일정을 선택해 주세요");
+    item.schedule_id = row.id;
+    save();
+    return json({ ok: true, schedule_id: row.id, date: row.date });
+  });
+  on("POST", "/api/roadmap/items/:id/results", (q, b, p) => {
+    const item = S.roadmap.find(row => row.id === p.id);
+    if (!item || !S.results.some(row => row.id === b.result_id && !row.deleted_at)) return err("결과 기록을 선택해 주세요");
+    if (!item.results.includes(b.result_id)) item.results.push(b.result_id);
+    save();
+    return json({ ok: true });
+  });
+
+  on("GET", "/api/dashboard", () => {
+    const summary = { total: 0 };
+    const groups = new Map();
+    for (const result of S.results.filter(row => !row.deleted_at)) {
+      summary.total++;
+      summary[result.status] = (summary[result.status] || 0) + 1;
+      const date = result.cycle_date;
+      if (!groups.has(date)) groups.set(date, []);
+      groups.get(date).push({ ...result, user_email: "sample@example.com", name: "예시 팀원" });
+    }
+    return json({ summary, dates: [...groups.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([date, rows]) => ({ date, rows })) });
+  });
+
+  function demoWeek(value) {
+    const date = validDate(value) ? value : today();
+    return shift(date, -((dow(date) + 6) % 7));
+  }
+  function weeklyReport(week) {
+    const edited = S.reportEdits[week] || {};
+    const settings = S.reportSettings;
+    const days = ["월", "화", "수", "목", "금", "토", "일"].map((day, index) => {
+      const date = shift(week, index);
+      const done = S.results.filter(row => !row.deleted_at && row.cycle_date === date).map(row => row.item + " · " + row.result).join("\n");
+      const todo = S.schedules.filter(row => row.date === date).map(row => row.title).join("\n");
+      return { date, dow: day, kind: edited["c:" + date] ?? "예시 업무", done: edited["e:" + date] ?? done, todo: edited["f:" + date] ?? todo };
+    });
+    return { ...settings, week_start: week, week_end: shift(week, 6), prev: shift(week, -7), next_week: shift(week, 7), label: week + " 주간보고", days, edited: Object.keys(edited), author: edited.author ?? settings.author, goal: edited.goal ?? settings.goal, next: edited.next ?? "다음 회의에서 예시 결과 검토하기" };
+  }
+  on("GET", "/api/report/weekly", q => json(weeklyReport(demoWeek(q.get("week")))));
+  on("GET", "/api/report/settings", () => json({ settings: S.reportSettings }));
+  on("PUT", "/api/report/settings", (q, b) => {
+    for (const key of Object.keys(S.reportSettings)) if (Object.hasOwn(b, key)) S.reportSettings[key] = clean(b[key], 1000);
+    save();
+    return json({ ok: true });
+  });
+  on("PUT", "/api/report/cell", (q, b) => {
+    if (!/^(?:[efc]:\d{4}-\d{2}-\d{2}|goal|next|author)$/.test(b.field)) return err("보고서 칸을 확인해 주세요");
+    const week = demoWeek(b.week);
+    (S.reportEdits[week] ||= {})[b.field] = clean(b.value, 4000);
+    save();
+    return json({ ok: true });
+  });
+  on("DELETE", "/api/report/cell", (q, b) => {
+    const week = demoWeek(b.week);
+    if (b.field && S.reportEdits[week]) delete S.reportEdits[week][b.field];
+    else if (!b.field) delete S.reportEdits[week];
+    save();
+    return json({ ok: true });
+  });
+  on("POST", "/api/report/polish", (q, b) => {
+    if (S.aiCalls >= AI_LIMIT) return err("오늘의 예시 요약 한도를 사용했습니다", 429);
+    const week = demoWeek(b.week);
+    const report = weeklyReport(week);
+    const edits = S.reportEdits[week] ||= {};
+    const fields = [];
+    for (const day of report.days) {
+      const field = "e:" + day.date;
+      if (!day.done.trim() || Object.hasOwn(edits, field)) continue;
+      edits[field] = "예시 정리 · " + day.done.replace(/\n+/g, " / ");
+      fields.push(field);
+    }
+    if (fields.length) S.aiCalls++;
+    save();
+    return json({ updated: fields.length, fields, provider: "mock", calls: S.aiCalls, limit: AI_LIMIT });
+  });
+
   async function handle(url, method, bodyText) {
     const path = url.pathname;
     let body = {};
@@ -604,12 +835,14 @@
     return handle(url, method, bodyText);
   };
   load();
+  setupExpandedDemo();
 
   /* ── 화면 보정: 안내 배너 · 데모에서 막는 동작 ──────────────────────────── */
   function reset() {
     try { localStorage.removeItem(KEY); } catch { /* ignore */ }
+    try { sessionStorage.removeItem("roadmap-selection-v1"); } catch { /* ignore */ }
     for (const k of ["wc.mode", "wc.prin.open", "wc.gh.repo", "wc.lv.big"]) { try { localStorage.removeItem(k); } catch { /* ignore */ } }
-    location.href = "/personal";
+    location.href = "/";
   }
   window.workCycleDemo = { KEY, reset, state: () => S };
 
@@ -630,6 +863,41 @@
     bar.innerHTML = `<span class="demo-bar-tag">공개 데모</span><span class="demo-bar-text">로그인 없음 · 기록은 이 브라우저에만 저장되고 운영 서비스와 연결되지 않습니다 · 날짜가 바뀌면 새 예시로 시작합니다</span><button type="button" class="demo-bar-reset">체험 초기화</button><span id="demoNotice" class="demo-bar-notice" role="status" aria-live="polite" hidden></span>`;
     bar.querySelector(".demo-bar-reset").addEventListener("click", () => { if (confirm("체험 데이터를 처음 상태로 되돌릴까요?")) reset(); });
     wrap.prepend(bar);
+    const steps = [
+      ["/meetings?tab=list", "회의록을 열어 읽음으로 표시하고 할 일 탭을 살펴보세요."],
+      ["/kanban", "칸반 카드를 옮기거나 완료 처리해 보세요."],
+      ["/personal", "결과 기록에서 확인 방법과 결과를 적어 보세요."],
+      ["/report", "주간보고에서 집계된 기록을 확인하고 한 칸을 고쳐 보세요."],
+    ];
+    const step = Number(new URLSearchParams(location.search).get("tour")) - 1;
+    if (steps[step]) {
+      const guide = document.createElement("div");
+      guide.className = "demo-tour";
+      const next = steps[step + 1];
+      const link = document.createElement("a");
+      link.href = next ? next[0] + (next[0].includes("?") ? "&" : "?") + "tour=" + (step + 2) : "/roadmap";
+      link.textContent = next ? "다음 단계" : "통합 로드맵 둘러보기";
+      guide.append("핵심 체험 " + (step + 1) + " / 4 · " + steps[step][1] + " ", link);
+      bar.after(guide);
+    }
+    if (location.pathname.replace(/\/$/, "") === "/share-demo") {
+      const query = new URLSearchParams(location.search);
+      const row = S.shares.find(share => String(share.meeting_id) === query.get("id") && String(share.updated_at) === query.get("version"));
+      document.getElementById("demoShareTitle").textContent = row && shareStatus(row) === "active" ? row.title : "볼 수 없는 예시 링크";
+      document.getElementById("demoShareBody").textContent = row && shareStatus(row) === "active" ? row.body : "링크가 만료되었거나 공유가 중지되었거나 이 브라우저에서 만든 예시 링크가 아닙니다.";
+    }
+    const roadmap = document.getElementById("roadmapSetup");
+    if (roadmap) document.documentElement.classList.add("demo-roadmap");
+    const reportDownload = document.querySelector("#dl");
+    if (location.pathname.replace(/\/$/, "") === "/report" && reportDownload) {
+      reportDownload.textContent = "예시 보고서 내려받기";
+      reportDownload.addEventListener("click", event => {
+        event.preventDefault();
+        const query = new URL(reportDownload.href).searchParams;
+        const report = weeklyReport(demoWeek(query.get("week")));
+        download("work-cycle-demo-weekly.md", "# " + report.label + "\n\n" + report.days.map(day => "## " + day.date + "\n" + day.done + "\n" + day.todo).join("\n\n"));
+      });
+    }
 
     // 외부 계정 연결(OAuth)·파일 내려받기·볼트 — 데모에서는 안내만
     document.querySelectorAll('a[href^="/auth/"]').forEach((a) => { a.addEventListener("click", (e) => { e.preventDefault(); notice("공개 데모에서는 외부 계정 연결을 제공하지 않습니다."); }); a.setAttribute("aria-disabled", "true"); a.classList.add("demo-off"); });

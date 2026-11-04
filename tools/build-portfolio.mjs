@@ -1,35 +1,21 @@
 #!/usr/bin/env node
-/* tools/build-portfolio.mjs — 공개 데모(portfolio-dist/) 빌드
- *
- * 운영 화면 public/ 을 그대로 복사하고, 각 HTML <head> 맨 앞에
- *   - CSP(meta): connect-src 'none' — 네트워크 요청은 정적 파일·폰트뿐
- *   - /demo-api.js — /api/* 를 브라우저 안에서 처리하는 가짜 API (portfolio/demo-api.js)
- *   - /demo.css    — 데모 배너
- * 를 끼운다. 운영 HTML·JS·CSS 는 한 글자도 고치지 않는다(복사본에만 끼움).
- *
- * 범위 밖 화면(회사 마이페이지 /, 검증 대시보드, 나의 준비 현황, 주간보고)은 같은 헤더를 가진 안내 페이지로 바꾼다.
- * 루트(/)는 개인 마이페이지(/personal)로 보낸다.
- *
- * 사용: node tools/build-portfolio.mjs   →  portfolio-dist/
- *       npx wrangler deploy --config wrangler.portfolio.toml
- */
-import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const OUT = join(ROOT, "portfolio-dist");
 const SRC = join(ROOT, "public");
 const DEMO = join(ROOT, "portfolio");
-const OUT = process.argv[2] ? join(process.cwd(), process.argv[2]) : join(ROOT, "portfolio-dist");
 
-/** 범위 밖 화면 → 안내 페이지 (탭 이름은 personal.html 헤더의 href 와 같아야 'on' 표시가 붙는다) */
-const OUT_OF_SCOPE = {
-  "dashboard.html": { href: "/dashboard", title: "검증 대시보드", why: "팀 검증 기록을 모아 보는 회사용 화면입니다. 공개 데모는 개인용 화면만 담았습니다." },
-  "personal-dashboard.html": { href: "/personal-dashboard", title: "나의 준비 현황", why: "기간별 결과·계획·회고 집계 화면입니다. 1차 공개 범위(개인 마이페이지 · 회의록 · 칸반 · 스케줄)에 들어 있지 않습니다." },
-  "report.html": { href: "/report", title: "주간보고", why: "한 주 기록을 보고 양식으로 모아 AI 로 다듬는 화면입니다. 1차 공개 범위에 들어 있지 않습니다." },
-};
-const SKIP = new Set(["index.html", "downloads"]);   // 회사 마이페이지 · 바탕화면 배너 실행 파일
-
+// The public bundle is an explicit allowlist. Reference catalogs and private reports stay out.
+const pages = ["personal", "meetings", "schedule", "kanban", "roadmap", "personal-dashboard", "dashboard", "report", "more"];
+const assets = [
+  "acc.js", "edit.js", "ext.js", "logo.svg", "meeting-share-manager.css", "meeting-share-manager.js",
+  "meeting-sharing.js", "membership.js", "mobile.css", "mobile.js", "mode-switch.js", "personal-edit.js",
+  "personal-ui.js", "personal.css", "principles.js", "quick.js", "roadmap-action-checks.js", "roadmap-context.js",
+  "roadmap.css", "roadmap.js", "style.css", "theme.js",
+];
 const CSP = [
   "default-src 'self'",
   "connect-src 'none'",
@@ -47,99 +33,40 @@ function inject(html, file) {
   return html.replace(re, (m) => m + INJECT);
 }
 
-/** personal.html 의 <head> 링크·헤더를 그대로 빌려 안내 페이지를 만든다 */
-function noticePage(personalHtml, { href, title, why }) {
-  const header = personalHtml.match(/<header class="top">[\s\S]*?<\/header>/)?.[0];
-  if (!header) throw new Error("personal.html 에서 <header class=\"top\"> 를 찾지 못했습니다");
-  const nav = header.replace(/ class="on"/g, "").replace(`href="${href}"`, `href="${href}" class="on"`);
-  return `<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">${INJECT}
-<title>work-cycle · ${title}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="icon" type="image/svg+xml" href="/logo.svg?v=27-apricot">
-<link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/personal.css">
-<link rel="stylesheet" href="/mobile.css">
-<script src="/mobile.js" defer></script>
-</head>
-<body class="theme-material" data-work-mode="personal">
-<script src="/theme.js"></script><script src="/mode-switch.js"></script>
-<div class="wrap">
-${nav}
-<div class="card sig">
-  <h2>${title} — 공개 데모에서는 제공하지 않는 화면입니다</h2>
-  <p class="sub">${why}</p>
-  <p style="display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0">
-    <a class="btn2" href="/personal" style="text-decoration:none">개인 마이페이지로</a>
-    <a class="btn2 ghost" href="/meetings" style="text-decoration:none">회의록</a>
-    <a class="btn2 ghost" href="/kanban" style="text-decoration:none">칸반</a>
-    <a class="btn2 ghost" href="/schedule" style="text-decoration:none">스케줄</a>
-  </p>
-</div>
-<footer>work-cycle · 공개 데모 — 허구 예시 데이터</footer>
-</div>
-<script src="/quick.js"></script>
-<script src="/membership.js"></script>
-<script src="/acc.js"></script>
-<script src="/principles.js"></script>
-</body>
-</html>
-`;
-}
 
-const ROOT_REDIRECT = `<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="0; url=/personal">
-<title>work-cycle · 공개 데모</title>
-<link rel="icon" type="image/svg+xml" href="/logo.svg?v=27-apricot">
-</head>
-<body>
-<p>공개 데모는 <a href="/personal">개인 마이페이지</a>에서 시작합니다.</p>
-</body>
-</html>
-`;
-
-function walk(dir) {
-  return readdirSync(dir).flatMap((name) => {
-    const p = join(dir, name);
-    return statSync(p).isDirectory() ? walk(p) : [p];
-  });
+function shell(title, body) {
+  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + title + '</title><link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/style.css"></head><body class="theme-airtable"><main class="wrap demo-landing">' + body + '</main></body></html>';
 }
+const landing = shell("work-cycle 공개 체험", '<section class="card"><p>로그인 없이 사용 · 예시 데이터</p><h1>work-cycle 공개 체험</h1><p>회의록을 확인하고, 칸반에서 일을 진행한 뒤 결과를 주간보고로 모아 보세요.</p><div class="demo-entry"><a class="btn2" href="/meetings?tab=list&amp;tour=1">3분 핵심 체험</a><a class="btn2 ghost" href="/personal">자유롭게 둘러보기</a></div><p>입력한 기록은 이 브라우저에만 저장됩니다. 요약과 공유 링크는 예시로 체험합니다.</p></section><nav class="card demo-entry" aria-label="체험 화면"><a href="/roadmap">통합 로드맵</a><a href="/meetings?tab=list">회의록과 공유 관리</a><a href="/schedule">스케줄</a><a href="/kanban">칸반</a><a href="/personal-dashboard">나의 준비 현황</a><a href="/report">주간보고</a><a href="/dashboard">검증 대시보드</a></nav>');
+const share = shell("공유 링크 체험", '<section class="card"><p>이 브라우저에서만 열리는 예시 링크</p><h1 id="demoShareTitle"></h1><pre id="demoShareBody"></pre><a href="/meetings?tab=list">회의록으로 돌아가기</a></section>');
 
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
-const personalHtml = readFileSync(join(SRC, "personal.html"), "utf8");
-const report = { copied: [], injected: [], notice: [], skipped: [] };
-
-for (const abs of walk(SRC)) {
-  const rel = relative(SRC, abs);
-  const top = rel.split(/[\\/]/)[0];
-  if (SKIP.has(top)) { report.skipped.push(rel); continue; }
-  const dest = join(OUT, rel);
-  mkdirSync(dirname(dest), { recursive: true });
-  if (OUT_OF_SCOPE[rel]) { writeFileSync(dest, noticePage(personalHtml, OUT_OF_SCOPE[rel])); report.notice.push(rel); continue; }
-  if (rel.endsWith(".html")) { writeFileSync(dest, inject(readFileSync(abs, "utf8"), rel)); report.injected.push(rel); continue; }
-  cpSync(abs, dest); report.copied.push(rel);
-}
-writeFileSync(join(OUT, "index.html"), ROOT_REDIRECT);
-for (const f of ["demo-api.js", "demo.css"]) cpSync(join(DEMO, f), join(OUT, f));
-
-// 복사본의 인라인 <script> 문법 검사 (AGENTS.md 2-1 과 같은 방식)
-for (const rel of report.injected) {
-  const html = readFileSync(join(OUT, rel), "utf8");
-  for (const [i, m] of [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].entries()) {
-    try { new Function(m[1]); } catch (e) { throw new Error(`${rel} 인라인 스크립트 #${i}: ${e.message}`); }
+for (const page of pages) {
+  const file = page + ".html";
+  let html = readFileSync(join(SRC, file), "utf8");
+  html = html.replace(/(href="\/dashboard") data-mode="company"/g, "$1");
+  if (page === "meetings") {
+    html = html.replace(/서버에는 주소의 해시값만 보관합니다\.[^<]+/, "공유 상태와 링크는 이 브라우저에서 체험할 수 있어요. 다른 기기나 브라우저에서는 예시 링크를 열 수 없습니다.");
   }
+  if (page === "roadmap") {
+    html = html.replace(/<script src="\/(?:roadmap-guides|ai-content-guides|roadmap-references|roadmap-reference-view|roadmap-progress|roadmap-actions)\.js" defer><\/script>\s*/g, "");
+  }
+  html = inject(html, file);
+  for (const script of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Function(script[1]);
+  writeFileSync(join(OUT, file), html);
 }
+for (const file of assets) {
+  const source = join(SRC, file);
+  if (file === "mode-switch.js") {
+    const code = readFileSync(source, "utf8").replace(", '/dashboard': '/personal-dashboard'", "");
+    writeFileSync(join(OUT, file), code);
+  } else if (file === "roadmap-action-checks.js") {
+    writeFileSync(join(OUT, file), readFileSync(source, "utf8").replace("계정에 저장됨", "이 브라우저에 저장됨"));
+  } else cpSync(source, join(OUT, file));
+}
+writeFileSync(join(OUT, "index.html"), inject(landing, "index.html"));
+writeFileSync(join(OUT, "share-demo.html"), inject(share, "share-demo.html"));
+for (const file of ["demo-api.js", "demo.css"]) cpSync(join(DEMO, file), join(OUT, file));
 new Function(readFileSync(join(OUT, "demo-api.js"), "utf8"));
-
-console.log(`portfolio-dist 빌드 완료 → ${relative(process.cwd(), OUT) || "."}`);
-console.log(`  데모 스크립트 삽입: ${report.injected.join(", ")}`);
-console.log(`  안내 페이지로 교체: ${report.notice.join(", ")} (+ index.html → /personal)`);
-console.log(`  그대로 복사: ${report.copied.length}개 · 제외: ${report.skipped.join(", ")}`);
+console.log("Portfolio build complete: " + pages.length + " interactive screens and local share preview");

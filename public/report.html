@@ -16,7 +16,7 @@
 
 <header class="top">
   <h1><img class="logo" src="/logo.svg?v=27-apricot" alt="">work-cycle</h1>
-  <nav class="nav-tabs"><a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/schedule">스케줄</a><a href="/meetings">회의록</a><a href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report" class="on">주간보고</a></nav><span class="mode-slot"></span>
+  <nav class="nav-tabs"><a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/roadmap" data-mode="personal">통합 로드맵</a><a href="/schedule">스케줄</a><a href="/meetings">회의록</a><a href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report" class="on">주간보고</a></nav><span class="mode-slot"></span>
   <button class="mode-toggle" onclick="toggleDark()" title="다크 모드">◑</button>
   <span class="me" id="me">…</span>
 </header>
@@ -42,10 +42,10 @@
   <h2>보고서 기본 정보</h2>
   <p class="sub">양식 머리말과 Prj.Code에 들어갑니다. 한 번만 넣어두면 매주 그대로 쓰입니다.</p>
   <form id="setForm" class="rp-set">
-    <label>작성자<input name="author" placeholder="예: 민예린"></label>
+    <label>작성자<input name="author" placeholder="예: 체험 사용자"></label>
     <label>소속<input name="dept" placeholder="기술연구소"></label>
     <label>직급<input name="role_name" placeholder="연구원"></label>
-    <label>Prj.Code<input name="prj_code" placeholder="예: EVX-26"></label>
+    <label>Prj.Code<input name="prj_code" placeholder="예: DEMO-26"></label>
     <label>프로젝트명<input name="project" placeholder="예: work-cycle"></label>
     <button class="btn2 pri">저장</button>
   </form>
