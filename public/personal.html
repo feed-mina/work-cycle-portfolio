@@ -19,8 +19,8 @@
 <header class="top">
   <h1><img class="logo" src="/logo.svg?v=27-apricot" alt="">work-cycle</h1>
   <nav class="nav-tabs">
-    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal" class="on">개인 마이페이지</a><a href="/roadmap" data-mode="personal">통합 로드맵</a><a href="/schedule">스케줄</a><a href="/meetings">회의록</a><a href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a>
-  </nav><span class="mode-slot"></span>
+    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal" class="on">개인 마이페이지</a><a href="/roadmap" data-mode="personal">통합 로드맵</a><a href="/schedule">스케줄</a><a href="/mail" data-mode="personal">메일</a><a href="/meetings">회의록</a><a data-feature="kanban" href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a>
+  <a href="/interactive-reports" data-mode="personal">내 보고서</a></nav><span class="mode-slot"></span>
   <button class="mode-toggle" onclick="toggleDark()" title="다크 모드">◑</button>
   <span class="me" id="me">…</span>
 </header><a class="roadmap-card-link" style="display:block;padding:16px;margin:14px 0;border:1px solid var(--line);border-radius:10px;background:var(--accent-soft);color:var(--ink)" href="/roadmap"><b>통합 로드맵 · KMovement·생활 IoT →</b><br>목표·기한·다음 행동을 기존 일정·메모·결과와 연결합니다.</a><p id="personalUiStatus" role="status"></p>
@@ -206,7 +206,7 @@
   </table></div>
 </div>
 
-<footer>work-cycle · 개인용 — 개인 계획·회고·체크리스트·결과는 회사 기록과 분리 저장 · 스케줄·회의록·칸반·퀵 기록·주간보고는 공용</footer>
+<footer>work-cycle · 개인용 — 개인 계획·회고·체크리스트·결과는 회사 기록과 분리 저장 · 스케줄·회의록<span data-feature="kanban">·칸반</span>·퀵 기록·주간보고는 공용</footer>
 </div>
 
 <script>

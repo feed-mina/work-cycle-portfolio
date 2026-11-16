@@ -1,0 +1,98 @@
+/* Google 연동(메일·캘린더) 공용 모양 — mail.html · schedule.html 이 함께 씁니다.
+   주의: font 단축 속성에 var(--font)를 쓰면 선언이 통째로 무효가 될 수 있어 속성을 나눠 적습니다. */
+[hidden]{display:none!important}
+.google-workspace{overflow-wrap:anywhere;min-width:0;--gw-soft:var(--surface2,var(--bg))}
+.google-workspace p{line-height:1.7}
+.google-workspace h3{font-size:14px;margin:22px 0 8px}
+.gw-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* 제목 + 연결 상태 */
+.gw-head{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-bottom:6px}
+.gw-head h2{margin:0}
+.gw-head .gw-link{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--accent);text-decoration:none}
+.gw-head .gw-link:hover{text-decoration:underline}
+.gw-status{display:inline-flex;align-items:center;gap:7px;margin:0;padding:4px 11px;border-radius:999px;
+  background:var(--gw-soft);border:1px solid var(--line);color:var(--ink2);font-size:12.5px;font-weight:600;line-height:1.5!important;max-width:100%}
+.gw-status::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--ink3)}
+.gw-status.on{background:var(--ok-soft);border-color:transparent;color:var(--ok)}
+.gw-status.on::before{background:var(--ok)}
+.gw-status:empty{display:none}
+.google-note{font-size:12.5px;color:var(--ink2);line-height:1.7;margin:6px 0}
+.google-note a{color:var(--accent)}
+.google-error{margin:12px 0;padding:10px 12px;border-radius:8px;background:var(--bad-soft);color:var(--bad);font-size:13px;font-weight:600}
+
+/* 연결 설정 접이식 */
+.gw-setup{margin:12px 0;border:1px solid var(--line);border-radius:10px;background:var(--gw-soft)}
+.gw-setup>summary{cursor:pointer;padding:10px 14px;font-size:13px;font-weight:700;color:var(--ink2);list-style-position:inside}
+.gw-setup>summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:10px}
+.gw-setup[open]>summary{border-bottom:1px solid var(--line)}
+.gw-setup>form,.gw-setup>.gw-setup-body{padding:12px 14px 14px;margin:0}
+
+/* 입력 */
+.google-workspace label{font-size:12.5px;font-weight:600;color:var(--ink2)}
+.gw-field{display:block;margin:0 0 5px}
+.google-workspace input[type=email],.google-workspace input[type=search],.google-workspace input[type=password],
+.google-workspace input[type=date],.google-workspace select{box-sizing:border-box;max-width:100%;min-height:36px;padding:7px 10px;
+  border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font-family:inherit;font-size:13.5px}
+.google-workspace input[type=email],.google-workspace input[type=password],.gw-wide{width:min(100%,380px)}
+.google-workspace input:focus-visible,.google-workspace select:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.google-workspace input[type=checkbox]{width:16px;height:16px;margin:2px 0 0;flex:none;accent-color:var(--accent)}
+.gw-check{display:flex;gap:9px;align-items:flex-start;margin:12px 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+  background:var(--card);font-size:13px!important;font-weight:500!important;color:var(--ink)!important;line-height:1.6}
+
+/* 버튼 */
+.google-workspace .btn2{height:auto;min-height:36px;padding:7px 14px;white-space:normal;text-align:left;line-height:1.35;text-decoration:none}
+.google-workspace .btn2:disabled{opacity:.45;cursor:not-allowed}
+.google-workspace .btn2:focus-visible,.gw-quiet:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.google-workspace .btn2.ghost:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.gw-quiet{border:0;background:none;padding:6px 2px;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink3);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.gw-quiet:hover{color:var(--bad)}
+.google-tools{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0;align-items:center}
+.google-tools .gw-end{margin-left:auto}
+
+/* 묶음 상자 · 진행 안내 */
+.gw-box{margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:10px}
+.gw-banner{margin:12px 0;padding:10px 12px;border-radius:8px;background:var(--accent-soft);color:var(--ink);font-size:13px;font-weight:600}
+.gw-banner:empty{display:none}
+.gw-notes{margin:10px 0;padding:0 0 0 18px;font-size:12.5px;color:var(--ink2);line-height:1.7}
+
+/* 확인할 변경 목록 */
+.google-review-list{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:10px;max-height:340px;overflow:auto}
+.google-review-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.google-review-list li:last-child{border-bottom:0}
+.google-review-list strong{grid-column:1;font-size:13.5px}
+.google-review-list p{grid-column:1;margin:0}
+.google-review-list button{grid-column:2;grid-row:1/span 2}
+.google-review-list:empty::after{content:"지금 확인할 항목이 없습니다.";display:block;padding:14px;font-size:13px;color:var(--ink3)}
+.google-workspace .google-review{padding:16px;border:1px solid var(--accent);border-radius:10px;margin-top:16px;background:var(--gw-soft)}
+.google-review h3{margin-top:0}
+.google-compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.google-compare section{min-width:0;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.google-compare h4{margin:0 0 6px;font-size:12.5px;color:var(--ink2)}
+.gmail-body,.google-compare pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;line-height:1.8;font-size:13.5px;margin:0}
+
+/* Google 일정 읽기 */
+.gw-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0 8px}
+.gw-seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.gw-seg button{border:0;border-right:1px solid var(--line);background:var(--card);color:var(--ink2);padding:8px 14px;
+  font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.gw-seg button:last-child{border-right:0}
+.gw-seg button.on{background:var(--accent);color:#fff}
+.gw-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.gw-range{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0}
+.gw-range span{color:var(--ink3)}
+.gw-events{list-style:none;margin:8px 0 0;padding:0;border:1px solid var(--line);border-radius:10px;max-height:420px;overflow:auto}
+.gw-events:empty{display:none}
+.gw-events li{display:grid;grid-template-columns:170px minmax(0,1fr);gap:4px 14px;align-items:baseline;padding:10px 14px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.gw-events li:last-child{border-bottom:0}
+.gw-events .gw-when{font-size:12.5px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+.gw-events strong{font-size:13.5px;font-weight:600}
+
+@media(max-width:750px){
+  .google-compare{grid-template-columns:minmax(0,1fr)}
+  .gw-events li{grid-template-columns:minmax(0,1fr)}
+  .google-review-list li{grid-template-columns:minmax(0,1fr)}
+  .google-review-list button{grid-column:1;grid-row:auto;justify-self:start;margin-top:6px}
+  .google-tools .gw-end{margin-left:0}
+  .gw-head .gw-link{margin-left:0}
+}

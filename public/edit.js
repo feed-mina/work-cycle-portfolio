@@ -78,6 +78,11 @@
 
   /* ── 일정 편집 ────────────────────────────────────────────────── */
   window.openSchedModal = function (row, onSaved) {
+    const canCancelInterview = row.scope === "personal" && typeof window.openInterviewCancellation === "function";
+    if (canCancelInterview && row.status === "취소") {
+      window.openInterviewCancellation(row, onSaved);
+      return;
+    }
     const wd = ["일", "월", "화", "수", "목", "금", "토"];
     const [y, m, d] = (row.date || "").split("-").map(Number);
     const dayName = y ? wd[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] : "";
@@ -133,7 +138,12 @@
         placeholder="진행 중 알게 된 점이나 다음에 기억할 내용을 적으세요">${esc(row.memo || "")}</textarea></label>
       <label class="em-f"><span>유형</span><div class="em-segs" data-name="block_type">${seg}</div></label>
       ${meetRow}
-    `, `<button type="button" class="em-btn danger" data-act="del">삭제</button>`);
+    `, `<button type="button" class="em-btn danger" data-act="del">삭제</button>${canCancelInterview ? '<button type="button" class="em-btn" data-act="interview-cancel">면접 참석 취소</button>' : ''}`);
+
+    back.querySelector('[data-act="interview-cancel"]')?.addEventListener("click", () => {
+      close();
+      window.openInterviewCancellation(row, onSaved);
+    });
 
     let block = currentBlock;
     back.querySelectorAll(".em-seg[data-v]").forEach(b => b.addEventListener("click", () => {

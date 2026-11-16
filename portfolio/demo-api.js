@@ -11,7 +11,7 @@
  */
 (() => {
   "use strict";
-  const KEY = "portfolio-demo:work-cycle:v3";
+  const KEY = "portfolio-demo:work-cycle:v4";
   const EMAIL = "guest@example.com";
   const NAME = EMAIL.split("@")[0];
   const UI_VERSION = "personal-v1";
@@ -171,11 +171,11 @@
   function load() {
     try {
       const raw = JSON.parse(localStorage.getItem(KEY) || "null");
-      if (raw && raw.version === 2 && raw.anchor === today()) { S = raw; return; }
+      if (raw && raw.version === 2 && raw.anchor === today() && ["schedules","logs","meetings","notes","kanban","results"].every(k => Array.isArray(raw[k])) && Number.isFinite(raw.seq)) { S = raw; return; }
     } catch { /* 깨진 저장값은 버린다 */ }
     S = seed(); save();
   }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* 사생활 보호 모드 등 — 이번 화면에서만 체험 */ } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { window.demoStorageWarning = "브라우저 저장이 제한되어 새로고침하면 입력이 사라집니다."; document.getElementById("demoStorageWarning")?.remove(); const p=document.createElement("p");p.id="demoStorageWarning";p.setAttribute("role","alert");p.textContent=window.demoStorageWarning;document.body?.prepend(p); } }
   const nextId = () => ++S.seq;
   const clean = (x, max = 3000) => (typeof x === "string" ? x.trim().slice(0, max) : "");
 
@@ -824,8 +824,8 @@
   const realFetch = window.fetch.bind(window);
   window.fetch = async function (input, init) {
     const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url;
-    let url; try { url = new URL(raw, location.href); } catch { return realFetch(input, init); }
-    if (url.origin !== location.origin || !(url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/"))) return realFetch(input, init);
+    let url; try { url = new URL(raw, location.href); } catch { return err("공개 체험에서는 네트워크 요청을 차단합니다", 403); }
+    if (url.origin !== location.origin || !(url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/"))) return err("공개 체험에서는 네트워크 요청을 차단합니다", 403);
     if (url.pathname.startsWith("/auth/")) return err("공개 데모에서는 외부 계정 연결을 제공하지 않습니다", 404);
     const method = String(init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
     let bodyText = null;
@@ -844,7 +844,7 @@
     for (const k of ["wc.mode", "wc.prin.open", "wc.gh.repo", "wc.lv.big"]) { try { localStorage.removeItem(k); } catch { /* ignore */ } }
     location.href = "/";
   }
-  window.workCycleDemo = { KEY, reset, state: () => S };
+  window.workCycleDemo = { KEY, reset, state: () => S, save, nextId, today, shift, json, err, on: (method,path,handler) => { const index=routes.findIndex(r=>r.method===method && r.re.test(path)); if(index>=0) routes.splice(index,1); on(method,path,handler); } };
 
   function download(name, text) {
     const a = document.createElement("a");
@@ -901,8 +901,9 @@
 
     // 외부 계정 연결(OAuth)·파일 내려받기·볼트 — 데모에서는 안내만
     document.querySelectorAll('a[href^="/auth/"]').forEach((a) => { a.addEventListener("click", (e) => { e.preventDefault(); notice("공개 데모에서는 외부 계정 연결을 제공하지 않습니다."); }); a.setAttribute("aria-disabled", "true"); a.classList.add("demo-off"); });
+    if(window.demoStorageWarning){const p=document.createElement("p");p.id="demoStorageWarning";p.setAttribute("role","alert");p.textContent=window.demoStorageWarning;bar.after(p);}
     const vaultSub = document.querySelector(".sub.vault-personal");
-    if (vaultSub) vaultSub.textContent = "공개 데모에서는 ME 볼트(GitHub)를 읽지 않습니다 — 아래 회의록 목록은 허구 예시입니다.";
+    if (vaultSub) vaultSub.textContent = "ME 문서 탐색·가져오기는 허구 예시로 동작합니다. 실제 GitHub 문서는 읽지 않습니다.";
     document.addEventListener("click", (e) => {
       const t = e.target.closest("#lvHtml,#lvDlHtml,#lvDlMd,#worklogMd,#bannerInstall,.vault-doc a,.vault-collection a");
       if (!t) return;

@@ -50,6 +50,83 @@
 </style>
 <link rel="stylesheet" href="/mobile.css">
 <script src="/mobile.js" defer></script>
+<link rel="stylesheet" href="/google-workspace.css"><link rel="stylesheet" href="/interview-cancellation.css">
+<style>
+/* ── 체험단 일정 (2026-11-12 디자인 정리) ── 색·둥글기는 style.css 변수만 쓴다 */
+.nblog-panel .sub:empty{display:none}
+.nblog-fields,.nblog-list{display:grid;min-width:0}
+.nblog-fields{gap:10px;margin:8px 0}.nblog-list{gap:12px;margin-top:6px}
+.nblog-fields label{display:grid;gap:5px;font-size:11.5px;font-weight:700;color:var(--ink2)}
+.nblog-fields input:not([type=checkbox]),.nblog-fields textarea{width:100%;min-width:0;box-sizing:border-box}
+.nblog-fields textarea{resize:vertical}
+.nblog-fields label.nblog-confirm{display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:500;color:var(--ink);
+  padding:10px 12px;border:1px dashed var(--line);border-radius:var(--r-sm);background:var(--surface2)}
+.nblog-fields label.nblog-confirm input{margin-top:3px}
+.nblog-fields h3{margin:0;font-size:15px}
+.nblog-fields>button,.nblog-fields>a{justify-self:start}
+.nblog-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#nblogImport{grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;margin:0 0 10px;
+  padding:12px;border-radius:var(--r-sm);background:var(--surface2)}
+@media(max-width:620px){#nblogImport{grid-template-columns:1fr}}
+#nblogReview:not(:empty){margin:10px 0;padding:14px;border:1px solid var(--accent);border-radius:var(--r-card);background:var(--card)}
+
+/* 카드: 윗줄에 업체명 + 상태 알약, 그 아래는 전부 한 줄씩 */
+.nblog-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;
+  padding:16px 18px;border:1px solid var(--line);border-radius:var(--r-card);background:var(--card);
+  box-shadow:var(--shadow);overflow-wrap:anywhere}
+.nblog-card>*{grid-column:1/-1;min-width:0}
+.nblog-card:focus{outline:2px solid var(--accent);outline-offset:2px}
+.nblog-card h3,.nblog-card p{margin:0}
+.nblog-card>h3{grid-column:1;font-size:16.5px;font-weight:800;letter-spacing:-.01em}
+.nblog-card>p{font-size:13px;color:var(--ink2)}
+.nblog-card>p.sub{color:var(--ink3);font-size:12px}
+.nblog-card>p strong{display:inline-block;margin-left:6px;padding:1px 9px;border-radius:999px;
+  background:var(--bad-soft);color:var(--bad);font-size:11.5px;font-weight:800}
+.nblog-phase{grid-column:2!important;justify-self:end;display:inline-flex;align-items:center;gap:6px;
+  padding:3px 11px;border-radius:999px;font-size:11.5px!important;font-weight:800;white-space:nowrap;
+  background:var(--surface2);color:var(--ink2)!important}
+.nblog-phase::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.nblog-phase[data-phase=todo]{background:var(--warn-soft);color:var(--warn)!important}
+.nblog-phase[data-phase=write]{background:var(--accent-soft);color:var(--accent)!important}
+.nblog-phase[data-phase=ok]{background:var(--ok-soft);color:var(--ok)!important}
+@media(max-width:520px){.nblog-phase{grid-column:1/-1!important;justify-self:start;white-space:normal}}
+
+/* 바로가기 링크는 작은 버튼 모양 */
+.nblog-card a,.nblog-fields>a{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:0 12px;
+  border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink2);
+  font-size:12px;font-weight:700;text-decoration:none}
+.nblog-card a::after,.nblog-fields>a::after{content:"↗";font-size:11px;opacity:.6}
+.nblog-card a:hover,.nblog-fields>a:hover{border-color:var(--accent);color:var(--accent)}
+.nblog-card>.nblog-actions{margin:4px 0 6px}
+
+/* 접는 줄: 줄마다 얇은 선, 펼치면 안쪽에 옅은 바탕 */
+.nblog-card>details{border-top:1px solid var(--line);margin:0 -18px;padding:0 18px}
+.nblog-card details>summary{display:flex;align-items:center;min-height:40px;font-size:13px;font-weight:600;color:var(--ink)}
+.nblog-card details>summary:hover{color:var(--accent)}
+.nblog-card>details[open]{background:var(--surface2);padding-bottom:12px}
+.nblog-card details p{white-space:pre-line;font-size:13px;color:var(--ink2);line-height:1.6}
+.nblog-card details p+p{margin-top:6px}
+.nblog-card details ul,.nblog-history ol{margin:0;padding-left:20px;font-size:13px;color:var(--ink2)}
+.nblog-card details li{margin:5px 0;line-height:1.55}
+.nblog-card details details{margin-top:4px}
+.nblog-foot{display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);margin:0 -18px;padding:12px 18px 0}
+.nblog-card .btn2{min-height:36px}
+.nblog-save-state{border-left:3px solid var(--accent);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:8px 11px;
+  background:var(--accent-soft);color:var(--ink2);font-size:12px}
+
+/* 리뷰 초안 작업칸 */
+.nblog-publish-workspace{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--surface2);min-width:0;margin:6px 0}
+.nblog-publish-workspace h4,.nblog-publish-workspace h5{margin:0;font-size:14px;font-weight:800}
+.nblog-publish-workspace h5{font-size:12.5px;color:var(--ink2)}
+.nblog-publish-workspace p{margin:0}
+.nblog-publish-workspace label{display:grid;gap:5px;font-size:11.5px;font-weight:700;color:var(--ink2)}
+.nblog-publish-workspace label .sub{display:inline;font-weight:500;margin:0}
+.nblog-publish-workspace textarea,.nblog-publish-workspace input{box-sizing:border-box;width:100%;min-width:0}
+.nblog-publish-workspace pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:28rem;overflow:auto;margin:0;
+  padding:12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card);font-family:var(--font);font-size:13px;line-height:1.65}
+.nblog-publish-workspace [hidden]{display:none}
+</style>
 </head>
 <body class="theme-airtable">
 <script src="/theme.js"></script><script src="/mode-switch.js"></script>
@@ -59,7 +136,7 @@
 <header class="top">
   <h1><img class="logo" src="/logo.svg?v=27-apricot" alt="">work-cycle</h1>
   <nav class="nav-tabs">
-    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/roadmap" data-mode="personal">통합 로드맵</a><a href="/schedule" class="on">스케줄</a><a href="/meetings">회의록</a><a href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a>
+    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/roadmap" data-mode="personal">통합 로드맵</a><a href="/schedule" class="on">스케줄</a><a href="/mail" data-mode="personal">메일</a><a href="/meetings">회의록</a><a data-feature="kanban" href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a>
   </nav><span class="mode-slot"></span>
   <button class="mode-toggle" onclick="toggleDark()" title="다크 모드">◑</button>
   <span class="me" id="me">…</span>
@@ -96,6 +173,7 @@
 
   <!-- 주간 뷰 -->
   <div id="weekView">
+    <label id="interviewScheduleFilter" hidden><input type="checkbox" id="showCancelledSchedules" checked> 취소 일정 보기</label>
     <div class="week" id="week"></div>
     <form class="inline" id="schForm">
       <input type="date" name="date" required>
@@ -118,6 +196,58 @@
   </div>
 </div>
 
+<section class="card nblog-panel" id="nblogCampaigns" hidden aria-labelledby="nblogTitle">
+  <h2 id="nblogTitle">체험단 일정</h2>
+  <p class="sub">강남맛집 캠페인 링크로 예약, 방문, 리뷰 등록을 한곳에서 챙겨요.</p>
+  <form id="nblogImport" class="nblog-fields">
+    <label>강남맛집 캠페인 링크
+      <input type="url" name="url" placeholder="https://강남맛집.net/cp/?id=…" maxlength="500" required>
+    </label>
+    <div class="nblog-actions"><button type="submit" class="btn2">링크 가져오기</button><button type="button" id="nblogReload" class="btn2 ghost">목록 다시 불러오기</button></div>
+  </form>
+  <p id="nblogStatus" class="sub" role="status"></p>
+  <p id="nblogResult" class="sub" role="status"></p>
+  <div id="nblogReview"></div>
+  <div id="nblogList" class="nblog-list"></div>
+</section>
+<section id="googleSyncCard" class="card google-workspace" hidden aria-labelledby="googleSyncTitle">
+<div class="gw-head"><h2 id="googleSyncTitle">Google 캘린더 양방향 동기화</h2><p id="googleSyncStatus" class="gw-status" role="status" aria-live="polite"></p></div>
+<p class="google-note">선택한 Google 캘린더와 work-cycle 개인 일정의 생성·수정을 서로 반영합니다. 삭제·동시 수정은 비교 후 처리합니다. 기존 읽기 전용 연결·Meet 연결은 유지합니다.</p>
+<details id="googleSyncConnection" class="gw-setup" open><summary>수정 권한으로 Google 연결·다시 연결</summary><form action="/auth/google-workspace/calendar/start" method="post"><label class="gw-field" for="googleSyncAccount">연결할 Google 계정</label><input id="googleSyncAccount" name="account" type="email" required maxlength="254" autocomplete="email"><p class="google-note">캘린더 목록 읽기와 본인 캘린더 일정 수정 권한을 받습니다. 연결만으로 동기화를 켜지는 않습니다.</p><button id="googleSyncConnectButton" class="btn2" type="submit" disabled>Google 캘린더 수정 권한 연결</button></form></details>
+<p id="googleSyncError" class="google-error" role="alert" hidden></p><div id="googleSyncConnected" hidden>
+<form id="googleSyncConfigure" class="gw-box"><label class="gw-field" for="googleSyncCalendar">동기화할 내 캘린더</label><select id="googleSyncCalendar" class="gw-wide" required></select>
+<label class="gw-check"><input id="googleSyncConfirm" type="checkbox" required><span>이 캘린더의 일반 일정·하루 종일 일정을 가져오고, 다른 캘린더에 이미 연결되지 않은 내 개인 일정도 이 캘린더에 보냅니다.</span></label><button class="btn2" type="submit">이 범위로 양방향 동기화 켜기</button></form>
+<p id="googleSyncProgress" class="gw-banner" role="status" aria-live="polite"></p>
+<div class="google-tools"><button id="googleSyncRun" class="btn2" type="button" disabled>지금 동기화</button><button id="googleSyncPause" class="btn2 ghost" type="button" disabled>동기화 일시 정지</button><button id="googleSyncDisconnect" class="gw-quiet gw-end" type="button">수정 권한 앱 연결 해제</button></div>
+<ul class="gw-notes"><li>시작·종료 시각이 있는 같은 날 일정과 하루 종일 일정을 지원합니다. 종료 시각 미정은 확인 대기입니다. 반복·여러 날·특수 일정은 Google 원본을 유지하며 자동 수정하지 않습니다. 서로 다른 기존 일정을 제목만으로 합치지 않습니다.</li><li>한 번에 변경분 일부를 처리합니다. 남은 내용은 다시 누르거나 기존 예약 실행에서 이어 처리합니다. 휴대폰 캘린더 변경은 즉시 반영되는 방식은 아닙니다.</li></ul>
+<h3>확인할 변경·지원 범위</h3><ul id="googleSyncItems" class="google-review-list"></ul>
+<div id="googleSyncReview" class="google-review" hidden><h3>양쪽 변경 내용 비교</h3><div class="google-compare"><section><h4>work-cycle 개인 일정</h4><pre id="googleReviewLocal"></pre></section><section><h4>Google 일정</h4><pre id="googleReviewRemote"></pre></section></div>
+<label class="gw-check"><input id="googleReviewConfirm" type="checkbox"><span>비교한 내용과 아래 버튼이 적용할 대상을 확인했습니다.</span></label><div class="google-tools"><button id="googleReviewUseLocal" class="btn2" type="button" disabled>work-cycle 내용으로 Google 수정</button><button id="googleReviewUseGoogle" class="btn2" type="button" disabled>Google 내용으로 개인 일정 수정</button><button id="googleReviewDelete" class="btn2" type="button" disabled>남은 쪽에서도 삭제</button><button id="googleReviewKeep" class="btn2 ghost" type="button" disabled>남은 일정 보존</button></div></div></div></section>
+<section class="card google-workspace" id="googleCalendarRead" hidden aria-labelledby="googleCalendarTitle">
+  <div class="gw-head"><h2 id="googleCalendarTitle">Google 캘린더 일정</h2><p id="googleCalendarStatus" class="gw-status" role="status" aria-live="polite">연결 상태 확인 중</p><a class="gw-link" href="/mail">메일 화면 보기</a></div>
+  <p class="google-note">개인 화면에서 Google 기본 캘린더를 한국 시간 기준으로 읽어 표시합니다. 이 목록은 읽기 전용이며, work-cycle 일정을 Google에 저장하거나 변경하지 않습니다.</p>
+  <details id="googleCalendarConnection" class="gw-setup" open><summary>읽기 전용으로 Google 캘린더 연결·다시 연결</summary>
+  <form id="googleCalendarConnect" action="/auth/google-calendar/start" method="post">
+    <label class="gw-field" for="googleCalendarAccount">연결할 Google 계정 이메일</label>
+    <div class="google-tools" style="margin:0"><input id="googleCalendarAccount" name="account" type="email" required maxlength="254" autocomplete="email" placeholder="Google 계정 이메일">
+    <button class="btn2" type="submit">Google 캘린더 연결</button></div>
+  </form></details>
+  <div id="googleCalendarControls" hidden>
+    <div class="gw-toolbar">
+    <div class="google-calendar-range gw-seg" role="group" aria-label="빠른 기간 선택">
+      <button type="button" data-calendar-range="day">오늘</button>
+      <button type="button" data-calendar-range="week" class="on">7일</button>
+      <button type="button" data-calendar-range="month">30일</button>
+    </div>
+    <form id="googleCalendarRange" class="gw-range">
+      <label class="gw-sr" for="googleCalendarFrom">시작 날짜</label><input id="googleCalendarFrom" type="date" required><span aria-hidden="true">~</span>
+      <label class="gw-sr" for="googleCalendarTo">마지막 날짜</label><input id="googleCalendarTo" type="date" required>
+      <button type="submit" class="btn2 ghost">일정 새로 불러오기</button>
+    </form></div>
+    <p id="googleCalendarMessage" class="google-note" role="status" aria-live="polite"></p>
+    <ul id="googleCalendarEvents" class="gw-events" aria-label="Google 캘린더 일정"></ul>
+  </div>
+</section>
 <footer>work-cycle</footer>
 </div>
 
@@ -233,6 +363,8 @@ $('#donutCal').addEventListener('click', e=>{
 });
 
 // ── 주간 뷰 ──
+document.addEventListener('wc:google-sync',()=>{loadWeek();loadMonth();});
+document.addEventListener('wc:nblog-schedule',()=>{if (document.getElementById('monthView').style.display === 'none') loadWeek(); else loadMonth();});
 async function loadWeek(){
   const mon = ANCHOR;
   const days = Array.from({length:7},(_,i)=>{ const d=new Date(mon); d.setUTCDate(mon.getUTCDate()+i); return ymd(d); });
@@ -240,23 +372,25 @@ async function loadWeek(){
   $('#schTitle').textContent = `${mon.getUTCMonth()+1}월 ${wkNo}주 (${days[0].slice(5)} ~ ${days[6].slice(5)})`;
   const d = await api(`/api/schedules?from=${days[0]}&to=${days[6]}`);
   SCH_ROWS = d.rows;
+  $('#interviewScheduleFilter').hidden = d.scope !== 'personal';
   const names = ['월','화','수','목','금','토','일'];
   $('#week').innerHTML = days.map((day,i)=>{
-    const blocks = d.rows.filter(r=>r.date===day).map(r=>{
+    const blocks = d.rows.filter(r=>r.date===day && (r.status!=='취소' || $('#showCancelledSchedules').checked)).map(r=>{
       const mine = r.user_email===ME;
-      const doneCls = r.status==='완료' ? 'sdone' : '';
+      const doneCls = ['완료','취소'].includes(r.status) ? 'sdone' : '';
       const recent = mine ? (r.latest_log||'').trim() : '';
       const recentLine = recent.replace(/\s+/g,' ').slice(0,52);
       const log = recent ? `<small class="blk-log">📝 ${r.latest_log_time?esc(r.latest_log_time)+' ':''}${esc(recentLine)}${recent.length>52?'…':''}</small>` : '';
       const tip = recent ? ` · 최근 메모 ${r.latest_log_time||''} ${recentLine}` : '';
       return `<span class="blk ${r.block_type==='회의'?'meet2':''} ${mine?'clickable':''} ${doneCls} ${recent?'has-log':''}"
         ${mine?`data-sid="${r.id}" tabindex="0" role="button"`:''} title="${esc(r.title+tip)}">
-        <span class="blk-main">${r.status==='완료'?'✓ ':''}${r.meet_url?'📹 ':''}${(mine&&!isPersonalMode()&&r.status!=='완료'&&!(r.confirm_line||'').trim())?'<i class="nc" title="요구사항을 아직 한 줄로 확인받지 않았습니다">?</i>':''}${esc(r.title)}</span>${log}${mine?`<i class="x" onclick="event.stopPropagation();delSch(${r.id})">×</i>`:''}</span>`;
+        <span class="blk-main">${r.status==='취소'?'취소 · ':r.status==='완료'?'✓ ':''}${r.meet_url?'📹 ':''}${(mine&&!isPersonalMode()&&r.status!=='완료'&&!(r.confirm_line||'').trim())?'<i class="nc" title="요구사항을 아직 한 줄로 확인받지 않았습니다">?</i>':''}${esc(r.title)}</span>${log}${mine && r.status!=='취소'?`<i class="x" onclick="event.stopPropagation();delSch(${r.id})">×</i>`:''}</span>`;
     }).join('');
     return `<div class="wday ${day===TODAY?'today':''}"><b>${day.slice(8)} (${names[i]})</b>${blocks}</div>`;
   }).join('');
 }
 let SCH_ROWS = [];
+$('#showCancelledSchedules').addEventListener('change', loadWeek);
 function openSchTag(el){
   const row = SCH_ROWS.find(s=>String(s.id)===el.dataset.sid);
   if (row) openSchedModal(row, ()=>{ loadWeek(); loadDonuts(); });
@@ -297,7 +431,7 @@ async function loadMonth(){
     const date = `${d.ym}-${String(day).padStart(2,'0')}`;
     const chips = [
       ...(meet[date]??[]).map(r=>`<span class="chip meeting" title="${esc(r.title)}">회의 · ${esc(r.title)}</span>`),
-      ...(sch[date]??[]).slice(0,2).map(r=>`<span class="chip sched" title="${esc(r.title)}">${esc(r.title)}</span>`),
+      ...(sch[date]??[]).slice(0,2).map(r=>`<span class="chip sched" title="${esc(r.title)}">${r.status==='취소'?'취소 · ':''}${esc(r.title)}</span>`),
     ];
     const cyc = [];
     if (checks[date]) cyc.push(`c${checks[date]}`);
@@ -340,10 +474,15 @@ function move(n){
   loadDonuts();
 })();
 </script>
+<script src="/interview-cancellation.js" defer></script>
+<script src="/nblog-progress.js" defer></script>
+<script src="/nblog-workspace.js" defer></script>
+<script src="/nblog-campaigns.js" defer></script>
 <script src="/edit.js"></script>
 <script src="/quick.js"></script>
 <script src="/membership.js"></script>
 <script src="/acc.js"></script>
 <script src="/principles.js"></script>
-</body>
+<script src="/google-calendar-read.js"></script>
+<script src="/google-workspace.js"></script></body>
 </html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin"><title>work-cycle · 메일</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/mobile.css">
+<style>
+[hidden]{display:none!important}
+.mailbox.card{padding:0;overflow:hidden}
+.mail-top{padding:18px 22px 4px}
+.mail-top h2{margin:0 0 2px}
+.mail-tabs{display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--line)}
+.mail-tab{appearance:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;padding:11px 14px;
+  display:inline-flex;align-items:center;gap:8px;font-family:inherit;font-size:14px;font-weight:700;color:var(--ink3);cursor:pointer}
+.mail-tab:hover{color:var(--ink)}
+.mail-tab[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}
+.mail-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-3px;border-radius:6px}
+.mail-tab .dot{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.mail-tab.connected .dot{background:var(--ok)}
+.mail-panel{padding:16px 22px 22px;min-width:0}
+.mail-statusline{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.mail-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 0}
+.mail-toolbar .grow{flex:1 1 200px;min-width:0;width:auto}
+.mail-toolbar .end{margin-left:auto;display:flex;align-items:center;gap:14px}
+.mail-toolbar .end a{font-size:12.5px;font-weight:600;color:var(--accent);text-decoration:none}
+.mail-toolbar .end a:hover{text-decoration:underline}
+.mail-split{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);margin-top:12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.mail-listpane{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
+.mail-count{margin:0;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--gw-soft);font-size:12px;font-weight:600;color:var(--ink3)}
+.mail-list{list-style:none;margin:0;padding:0;max-height:640px;overflow:auto}
+.mail-list li{border-bottom:1px solid var(--line)}
+.mail-list li:last-child{border-bottom:0}
+.mail-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;width:100%;padding:11px 14px 11px 11px;border:0;border-left:3px solid transparent;
+  background:none;color:var(--ink);font-family:inherit;text-align:left;cursor:pointer}
+.mail-row:hover{background:var(--gw-soft)}
+.mail-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.mail-row[aria-current=true]{background:var(--accent-soft);border-left-color:var(--accent)}
+.mail-row .who{font-size:12.5px;font-weight:600;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mail-row .when{font-size:11.5px;color:var(--ink3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.mail-row .subj{grid-column:1/-1;font-size:13.5px;font-weight:500;line-height:1.45;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.mail-row.unread .who{color:var(--ink);font-weight:700}
+.mail-row.unread .who::before{content:"";display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:var(--accent)}
+.mail-row.unread .subj{font-weight:700}
+.mail-pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding:9px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--ink3)}
+.mail-reader{min-width:0;max-height:735px;overflow:auto;padding:20px 24px}
+.mail-reader h3{margin:0 0 8px;font-size:18px;line-height:1.4}
+.mail-reader h3:focus{outline:none}
+.mail-meta{margin:0;font-size:12.5px;color:var(--ink2);line-height:1.7!important}
+.mail-meta:empty{display:none}
+.mail-actions{margin:12px 0 0}
+.mail-body{margin:16px 0 0;padding-top:16px;border-top:1px solid var(--line);white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;font-size:14px;line-height:1.8}
+.mail-files{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 0;padding:0}
+.mail-files:empty{display:none}
+.mail-files li{padding:4px 11px;border:1px solid var(--line);border-radius:999px;background:var(--gw-soft);font-size:12px;color:var(--ink2)}
+.mail-files a{color:var(--accent);text-decoration:none}
+.mail-empty{display:grid;place-items:center;min-height:280px;margin:0;color:var(--ink3);font-size:13px;text-align:center}
+.mail-reader article:not([hidden])+.mail-empty{display:none}
+@media(max-width:760px){
+  .mail-top{padding:16px 16px 4px}.mail-tabs{padding:0 8px}.mail-panel{padding:14px 16px 18px}
+  .mail-split{grid-template-columns:minmax(0,1fr)}
+  .mail-listpane{border-right:0}.mail-list{max-height:420px}
+  .mail-reader{max-height:none;padding:16px;border-top:1px solid var(--line)}
+  .mail-empty{display:none}.mail-reader:not(:has(article:not([hidden]))){display:none}
+  .mail-toolbar .end{margin-left:0;width:100%;justify-content:space-between}
+}
+</style>
+<script src="/mobile.js" defer></script>
+<link rel="stylesheet" href="/google-workspace.css"></head>
+<body class="theme-airtable">
+<script src="/theme.js"></script><script src="/mode-switch.js"></script>
+<div class="wrap">
+<header class="top"><h1><img class="logo" src="/logo.svg?v=27-apricot" alt="">work-cycle</h1><nav class="nav-tabs">
+    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/roadmap" data-mode="personal">통합 로드맵</a><a href="/schedule">스케줄</a><a href="/mail" class="on" data-mode="personal">메일</a><a href="/meetings">회의록</a><a data-feature="kanban" href="/kanban">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a>
+  <a href="/interactive-reports" data-mode="personal">내 보고서</a></nav><span class="mode-slot"></span><button class="mode-toggle" onclick="toggleDark()" title="다크 모드">◑</button><span class="me" id="me"></span></header>
+<main>
+<div id="naverPersonalOnly" class="card" hidden>메일은 개인용 화면에서만 볼 수 있습니다. 상단 사용 화면을 개인용으로 바꿔주세요.</div>
+<section id="mailBox" class="card mailbox google-workspace" hidden aria-labelledby="mailTitle">
+<div class="mail-top"><h2 id="mailTitle">메일</h2><p class="google-note">연결한 메일함을 읽기만 합니다. 메일을 보내거나 읽음 상태를 바꾸지 않습니다.</p></div>
+<div class="mail-tabs" role="tablist" aria-label="메일함 선택">
+<button type="button" class="mail-tab" role="tab" id="mailTabGmail" aria-controls="mailPanelGmail" aria-selected="true"><span class="dot" aria-hidden="true"></span>Gmail<span class="gw-sr"></span></button>
+<button type="button" class="mail-tab" role="tab" id="mailTabNaver" aria-controls="mailPanelNaver" aria-selected="false" tabindex="-1"><span class="dot" aria-hidden="true"></span>네이버 메일<span class="gw-sr"></span></button>
+</div>
+<div id="mailPanelGmail" class="mail-panel" role="tabpanel" aria-labelledby="mailTabGmail">
+<section id="gmailMail" hidden aria-labelledby="gmailTitle">
+<h2 id="gmailTitle" class="gw-sr">Gmail</h2>
+<div class="mail-statusline"><p id="gmailStatus" class="gw-status" role="status" aria-live="polite"></p></div>
+<details id="gmailConnection" class="gw-setup" open><summary>Gmail 연결·다시 연결</summary><form action="/auth/google-workspace/gmail/start" method="post"><label class="gw-field" for="gmailAccount">연결할 Google 계정</label><input id="gmailAccount" name="account" type="email" required maxlength="254" autocomplete="email"><p class="google-note">Google 동의 화면에서 Gmail 읽기 권한을 허용합니다. 계정 비밀번호는 Google 화면에만 입력하세요.</p><button id="gmailConnectButton" class="btn2" type="submit" disabled>Google에서 Gmail 연결</button></form></details>
+<p id="gmailError" class="google-error" role="alert" hidden></p>
+<div id="gmailConnected" hidden>
+<form id="gmailSearch" class="mail-toolbar"><label class="gw-sr" for="gmailQuery">Gmail 검색</label><input id="gmailQuery" class="grow" type="search" maxlength="500" placeholder="검색 — 예: 면접 또는 after:2026/11/01"><button class="btn2" type="submit">검색</button><button id="gmailReload" class="btn2 ghost" type="button">목록 새로고침</button><span class="end"><a href="https://mail.google.com/" target="_blank" rel="noopener noreferrer">Gmail 원문 열기</a><button id="gmailDisconnect" class="gw-quiet" type="button">Gmail 앱 연결 해제</button></span></form>
+<p class="google-note">AI 일정 분석은 선택한 메일의 별도 버튼으로 시작합니다.</p>
+<div class="mail-split"><section class="mail-listpane" aria-label="Gmail 메일 목록"><p id="gmailCount" class="mail-count" role="status"></p><ul id="gmailMessages" class="mail-list"></ul><div class="mail-pager"><button id="gmailPrevious" class="btn2 ghost" type="button" disabled>이전</button><button id="gmailNext" class="btn2 ghost" type="button" disabled>다음</button></div></section>
+<div class="mail-reader"><article id="gmailDetail" hidden aria-labelledby="gmailSubject"><h3 id="gmailSubject"></h3><p id="gmailFrom" class="mail-meta"></p><p id="gmailDate" class="mail-meta"></p><p class="mail-actions"><a id="gmailDraft" class="btn2 ghost" href="/mail-schedule">면접 일정 초안 만들기</a></p><pre id="gmailBody" class="mail-body"></pre><ul id="gmailAttachments" class="mail-files"></ul></article><p class="mail-empty">왼쪽 목록에서 메일을 고르면<br>본문이 여기에 표시됩니다.</p></div></div></div>
+</section></div>
+<div id="mailPanelNaver" class="mail-panel" role="tabpanel" aria-labelledby="mailTabNaver" hidden>
+<section id="naverMail" hidden aria-labelledby="naverTitle">
+<h2 id="naverTitle" class="gw-sr">네이버 메일</h2>
+<div class="mail-statusline"><p id="naverStatus" class="gw-status" role="status" aria-live="polite">연결 상태 확인 중입니다.</p></div>
+<details id="naverConnection" class="gw-setup" open><summary>계정 연결 · 다시 연결</summary>
+<form id="naverConnect" autocomplete="off">
+<label class="gw-field" for="naverAccount">네이버 메일 주소</label><input id="naverAccount" name="account" type="email" placeholder="네이버 메일 주소" required maxlength="100" autocomplete="off">
+<label class="gw-field" for="naverPassword" style="margin-top:12px">네이버 애플리케이션 비밀번호</label><input id="naverPassword" name="password" type="password" required maxlength="256" autocomplete="new-password" aria-describedby="naverPasswordHelp">
+<p id="naverPasswordHelp" class="google-note">생성한 비밀번호를 여기에 직접 입력하세요. 연결을 확인한 뒤 서버에 암호화해 저장합니다. 비밀번호는 이 화면에서 다시 표시하지 않습니다.</p>
+<button id="naverConnectButton" class="btn2" type="submit" disabled>네이버 메일 연결</button>
+<p class="google-note"><a href="https://help.naver.com/service/5640/contents/8584" target="_blank" rel="noopener noreferrer">애플리케이션 비밀번호 생성 안내</a></p>
+</form>
+</details>
+<p id="naverError" class="google-error" role="alert" hidden></p>
+<div id="naverConnected" hidden>
+<form id="naverSearch" class="mail-toolbar"><label class="gw-sr" for="naverQuery">네이버 메일 검색</label><input id="naverQuery" class="grow" type="search" maxlength="100" placeholder="검색 — 제목 또는 보낸 사람"><button class="btn2" type="submit">검색</button><button id="naverSearchClear" class="btn2 ghost" type="button" hidden>전체 보기</button></form>
+<div class="mail-toolbar" style="margin-top:8px"><label for="naverFolder">메일함</label><select id="naverFolder" class="grow"></select><button type="button" id="naverReload" class="btn2 ghost">새로고침</button><span class="end"><a href="https://mail.naver.com/" target="_blank" rel="noopener noreferrer">네이버 메일 열기</a><button type="button" id="naverDisconnect" class="gw-quiet">연결 해제</button></span></div>
+<p class="google-note">내 메일함을 선택해서 기존 메일까지 25개씩 조회합니다. 네이버가 IMAP으로 제공하는 메일함을 표시합니다. 영구 삭제된 메일은 조회할 수 없습니다. 10MB를 넘는 메일은 네이버 메일에서 열어주세요.</p>
+<div class="mail-split"><section class="mail-listpane" aria-label="메일 목록"><p id="naverCount" class="mail-count" role="status"></p><ul id="naverMessages" class="mail-list"></ul><div class="mail-pager"><button id="naverPrevious" class="btn2 ghost" type="button" disabled>이전</button><span id="naverPage"></span><button id="naverNext" class="btn2 ghost" type="button" disabled>다음</button></div></section>
+<div class="mail-reader"><article id="naverDetail" hidden aria-labelledby="naverSubject"><h3 id="naverSubject" tabindex="-1"></h3><p id="naverFrom" class="mail-meta"></p><p id="naverTo" class="mail-meta"></p><p id="naverDate" class="mail-meta"></p><p class="mail-actions"><a id="naverScheduleDraft" class="btn2 ghost" href="/mail-schedule" hidden>면접 일정 초안 만들기</a></p><pre id="naverBody" class="mail-body"></pre><ul id="naverAttachments" class="mail-files"></ul></article><p class="mail-empty">왼쪽 목록에서 메일을 고르면<br>본문이 여기에 표시됩니다.</p></div></div>
+</div>
+</section></div>
+</section>
+</main><footer>work-cycle</footer></div>
+<script src="/mail-ui.js"></script>
+<script src="/naver-mail.js"></script>
+<script src="/google-workspace.js"></script></body></html>
+
