@@ -47,7 +47,8 @@ const ALLOWED_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
   // 체험 초기화 확인창만 승인한다. 그 밖의 alert/confirm 은 전부 실패로 센다(운영 화면이 '요청 실패'를 alert 로 알리므로).
   page.on("dialog", (d) => { dialogs.push(d.type() + ": " + d.message()); (d.message().startsWith("체험 데이터") ? d.accept() : d.dismiss()).catch(() => {}); });
   page.on("request", (r) => { const u = new URL(r.url()); if (u.origin !== base && !ALLOWED_HOSTS.includes(u.hostname)) external.push(r.url()); });
-  page.on("requestfailed", (r) => { const u = new URL(r.url()); if (u.origin === base) failed.push(r.url()); });
+  page.on("requestfailed", (r) => { const u = new URL(r.url()); if (u.origin === base && !r.failure()?.errorText.includes('ERR_ABORTED')) failed.push(r.url()); });
+  page.on("response", r => { if(r.status() >= 400) failed.push(r.url()); });
   const noOverflow = async (label) => assert(!(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)), "가로 넘침 " + label);
   const open = async (p) => { await page.goto(base + p, { waitUntil: "load" }); await page.waitForSelector(".demo-bar"); };
 
@@ -123,8 +124,8 @@ const ALLOWED_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
     await open("/meetings?tab=list");   // 마이페이지 '회의록 읽기' 단계에서 넘어오는 주소 — 목록 탭 + 볼트 인덱스까지 그린다
     await page.waitForSelector("#mlist article");
     assert((await page.locator("#mlist article").count()) >= 3, "회의록 목록 " + tag);
-    await page.waitForFunction(() => (document.querySelector("#vlist")?.textContent || "").includes("0개 파일"));
-    assert((await page.locator(".sub.vault-personal").textContent()).includes("공개 데모"), "볼트 안내 문구 " + tag);
+    await page.waitForFunction(() => (document.querySelector("#vlist")?.textContent || "").includes("3개 파일"));
+    assert((await page.locator(".sub.vault-personal").textContent()).includes("허구 예시"), "볼트 안내 문구 " + tag);
     await noOverflow("meetings " + tag);
     if (width === 1280) {
       await page.locator("#mlist article button").first().click();
@@ -205,7 +206,7 @@ const ALLOWED_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
   const storage = await page.evaluate(() => ({ ...localStorage }));
   assert(storage["production-record"] === "keep", "초기화가 관계없는 키를 지움");
   assert(before > 1, "초기화 전 저장값 있음");
-  const demoState = JSON.parse(storage["portfolio-demo:work-cycle:v3"] || "null");
+  const demoState = JSON.parse(storage["portfolio-demo:work-cycle:v4"] || "null");
   assert(demoState && !JSON.stringify(demoState).includes("데모 테스트 카드"), "초기화 뒤 새 예시");
 
   const realDialogs = dialogs.filter((d) => !d.startsWith("confirm: 체험 데이터"));

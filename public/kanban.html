@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>work-cycle · 칸반</title>
+<title>work-cycle</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="/logo.svg?v=27-apricot">
@@ -19,12 +19,13 @@
 <header class="top">
   <h1><img class="logo" src="/logo.svg?v=27-apricot" alt="">work-cycle</h1>
   <nav class="nav-tabs">
-    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/roadmap" data-mode="personal">통합 로드맵</a><a href="/schedule">스케줄</a><a href="/meetings">회의록</a><a href="/kanban" class="on">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a>
+    <a href="/" data-mode="company">마이페이지</a><a href="/personal" data-mode="personal">개인 마이페이지</a><a href="/roadmap" data-mode="personal">통합 로드맵</a><a href="/schedule">스케줄</a><a href="/mail" data-mode="personal">메일</a><a href="/meetings">회의록</a><a data-feature="kanban" href="/kanban" class="on">칸반</a><a href="/dashboard" data-mode="company">검증 대시보드</a><a href="/personal-dashboard" data-mode="personal">나의 준비 현황</a><a href="/report">주간보고</a>
   </nav><span class="mode-slot"></span>
   <button class="mode-toggle" onclick="toggleDark()" title="다크 모드">◑</button>
   <span class="me" id="me">…</span>
 </header>
 
+<main data-feature="kanban" id="kanbanContent">
 <div class="card">
   <form class="inline" id="kForm">
     <input name="title" placeholder="카드 제목" required style="flex:1;min-width:180px">
@@ -58,6 +59,7 @@
   <p class="sub" style="margin:0">⚠️ <b>"즉시 처리"가 3장을 넘었습니다</b> — 범위는 좁게, 결과는 빨리. 위임하거나 연기할 카드를 골라보세요.</p>
 </div>
 
+</main>
 <footer>work-cycle</footer>
 </div>
 
@@ -163,7 +165,7 @@ async function loadRepos(refresh){
 $('#ghRepo').addEventListener('change', () => { ghSyncCustom(); try { localStorage.setItem(GH_KEY, $('#ghRepo').value); } catch {} });
 $('#ghRepoCustom').addEventListener('change', () => { try { localStorage.setItem(GH_KEY, $('#ghRepoCustom').value.trim() || GH_CUSTOM); } catch {} });
 $('#ghRefresh').addEventListener('click', () => loadRepos(true));
-document.addEventListener('wc:mode', () => loadRepos(false));
+// The hidden board does not load external repository data on mode changes.
 
 // ── GitHub 이슈 → 카드 ──
 async function loadIssues(){
@@ -199,6 +201,7 @@ async function addFromIssue(repo, no, btn){
 $('#ghLoad').addEventListener('click', loadIssues);
 
 (async function(){
+  if (document.getElementById('kanbanContent')?.matches('[data-feature="kanban"]')) return;
   const me = await api('/api/me'); ME = me.email; $('#me').textContent = me.email;
   loadRepos(false);   // 카드가 열릴 때 1회 (캐시 1시간)
   load();

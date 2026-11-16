@@ -44,9 +44,10 @@
         <p data-status role="status"></p>`;
       const find=s=>panel.querySelector(s), confirm=find('[data-confirm]'), create=find('[data-create]'), status=find('[data-status]');
       function setLink(url){find('[data-url]').value=url;find('[data-open]').href=url;find('[data-linkbox]').hidden=false;}
-      const knownUrl=window.getMeetingShareUrl(id,d.updated_at);
+      const knownUrl=d.url||window.getMeetingShareUrl(id,d.updated_at);
+      if(d.active&&knownUrl)urls.set(Number(id),{url:knownUrl,updated_at:d.updated_at});
       find('[data-linkbox]').hidden=!d.active||!knownUrl;
-      if(d.active&&knownUrl)setLink(knownUrl);
+      if(d.active&&knownUrl){setLink(knownUrl);status.textContent='기존 공유 주소입니다. 다시 복사해도 주소와 만료일은 바뀌지 않습니다.';}
       find('[data-close]').onclick=()=>{generation++;panel.remove();document.getElementById('meetingShareButton')?.focus();};
       confirm.onchange=()=>{create.disabled=!confirm.checked;};
       find('[data-days]').onchange=()=>{confirm.checked=false;create.disabled=true;};
